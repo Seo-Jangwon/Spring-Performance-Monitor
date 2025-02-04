@@ -1,4 +1,4 @@
-# Spring Performance Monitor
+# Simple Spring Performance Measuring Annotation
 
 간단하게 성능 테스트와 모니터링을 위한 Spring Boot 기반의 도구입니다. API 엔드포인트의 부하 테스트를 수행하고, 메서드 수준의 성능을 모니터링할 수 있습니다.
 </br>
