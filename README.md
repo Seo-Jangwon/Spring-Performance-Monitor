@@ -6,7 +6,7 @@ A Spring Boot-based tool for simple performance testing and monitoring. It enabl
 
 ![alt text](image.png)
 
-## Key Features
+## 주요 기능 (Key Features)
 
 ### 1. 부하 테스트 (Performance Testing)
 - 웹 기반 대시보드를 통한 테스트 시나리오 생성 및 실행 (Create and execute test scenarios through a web-based dashboard)
