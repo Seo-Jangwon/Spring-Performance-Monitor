@@ -42,7 +42,7 @@ A Spring Boot-based tool for simple performance testing and monitoring. It enabl
 ## 사용 방법 (Usage)
 
 ### 1. 부하 테스트 실행하기 (Running Load Tests)
-1. 애플리케이션 실행 (Start the application) - http://localhost:8080
+1. 애플리케이션 실행 (Start the application) - http://localhost:8080/performanceMeasure
 2. 테스트 시나리오 입력 (Input test scenario)
    - Description: 테스트 설명 (Test description)
    - URL: 테스트할 엔드포인트 (Target endpoint)
