@@ -1,0 +1,361 @@
+<!--
+Copyright (c) 2025 Seo-Jangwon
+Licensed under MIT License
+-->
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Performance Test Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/jsoneditor@9.5.5/dist/jsoneditor.min.css"
+        rel="stylesheet">
+  <style>
+    .header-row button.remove-header {
+      display: none;
+    }
+
+    .header-row:not(:first-child) button.remove-header {
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+<div class="container mt-4">
+  <h2>API Performance Test Dashboard</h2>
+
+  <!-- 테스트 시나리오 입력 폼 -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h4>New Test Scenario</h4>
+    </div>
+    <div class="card-body">
+      <form id="testForm">
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <input type="text" class="form-control" id="description" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">URL</label>
+          <input type="url" class="form-control" id="url" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">HTTP Method</label>
+          <select class="form-select" id="method">
+            <option>GET</option>
+            <option>POST</option>
+            <option>PUT</option>
+            <option>DELETE</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Request Body (JSON)</label>
+          <div id="jsonEditor" style="height: 200px;"></div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Headers (Key-Value)</label>
+          <div id="headersContainer">
+            <div class="header-row d-flex mb-2">
+              <input type="text" class="form-control me-2" placeholder="Key">
+              <input type="text" class="form-control me-2" placeholder="Value">
+              <button type="button" class="btn btn-secondary btn-sm add-header">+</button>
+              <button type="button" class="btn btn-danger btn-sm ms-2 remove-header">-</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label class="form-label">Concurrent Users</label>
+              <input type="number" class="form-control" id="concurrentUsers" value="1" min="1">
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label class="form-label">Repeat Count</label>
+              <input type="number" class="form-control" id="repeatCount" value="1" min="1">
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label class="form-label">Ramp-up Seconds</label>
+              <input type="number" class="form-control" id="rampUpSeconds" value="0" min="0">
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Run Test</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 테스트 결과 목록 -->
+  <div class="card">
+    <div class="card-header">
+      <h4>Test Results</h4>
+    </div>
+    <div class="card-body">
+      <table class="table">
+        <thead>
+        <tr>
+          <th>Description</th>
+          <th>URL</th>
+          <th>Status</th>
+          <th>Avg Response Time</th>
+          <th>Max Response Time</th>
+          <th>Requests/sec</th>
+          <th>Error Rate</th>
+          <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody id="resultsBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsoneditor@9.5.5/dist/jsoneditor.min.js"></script>
+<script th:inline="javascript">
+  // JSON 에디터 초기화
+  const container = document.getElementById('jsonEditor');
+  const editor = new JSONEditor(container, {
+    mode: 'code',
+    statusBar: false,
+    mainMenuBar: false
+  });
+  editor.set({}); // 빈 객체로 초기화
+
+  // 헤더 추가/제거 기능
+  document.addEventListener('click', function (e) {
+    if (e.target.matches('.add-header')) {
+      const headerRow = e.target.closest('.header-row');
+      const newRow = headerRow.cloneNode(true);
+      // 새 행의 입력값 초기화
+      newRow.querySelectorAll('input').forEach(input => input.value = '');
+      headerRow.parentNode.insertBefore(newRow, headerRow.nextSibling);
+    } else if (e.target.matches('.remove-header')) {
+      const headerRow = e.target.closest('.header-row');
+      if (document.querySelectorAll('.header-row').length > 1) {
+        headerRow.remove();
+      }
+    }
+  });
+
+  // 폼 제출 처리
+  document.getElementById('testForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    let jsonBody;
+    try {
+      jsonBody = editor.get();
+    } catch (error) {
+      showError('Invalid JSON in request body');
+      return;
+    }
+
+    const requestData = {
+      description: document.getElementById('description').value,
+      url: document.getElementById('url').value,
+      method: document.getElementById('method').value,
+      requestBody: JSON.stringify(jsonBody),
+      headers: getHeaders(),
+      concurrentUsers: parseInt(document.getElementById('concurrentUsers').value),
+      repeatCount: parseInt(document.getElementById('repeatCount').value),
+      rampUpSeconds: parseInt(document.getElementById('rampUpSeconds').value)
+    };
+
+    console.log('Request Data:', requestData);
+
+    try {
+      const response = await fetch('/performanceMeasure/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      console.log('Response:', response);
+
+      if (response.ok) {
+        const testId = await response.text();
+        console.log('Test ID:', testId);
+        showSuccess('Test started successfully');
+        pollTestStatus(testId);
+      } else {
+        throw new Error('Failed to start test');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      showError('Error starting test: ' + error.message);
+    }
+  });
+
+  // 헤더 값 수집
+  function getHeaders() {
+    const headers = {};
+    document.querySelectorAll('.header-row').forEach(row => {
+      const keyInput = row.querySelector('input:first-of-type');
+      const valueInput = row.querySelector('input:last-of-type');
+
+      if (keyInput && valueInput) {  // null 체크 추가
+        const key = keyInput.value.trim();
+        const value = valueInput.value.trim();
+        if (key && value) {
+          headers[key] = value;
+        }
+      }
+    });
+    return headers;
+  }
+
+  let pollCount = 0;
+  const MAX_POLLS = 60;
+
+  async function pollTestStatus(testId) {
+    try {
+      if (pollCount++ > MAX_POLLS) {
+        showError("Test timed out");
+        return;
+      }
+
+      const response = await fetch(`/performanceMeasure/status/${testId}`);
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const status = await response.json();
+      updateResultsTable(status);
+
+      if (!status.completed) {
+        setTimeout(() => pollTestStatus(testId), 1000);
+      } else {
+        showSuccess('Test completed successfully');
+      }
+    } catch (error) {
+      showError(`Error: ${error.message}`);
+    }
+  }
+
+  function showError(message) {
+    showAlert(message, 'danger');
+  }
+
+  function showSuccess(message) {
+    showAlert(message, 'success');
+  }
+
+  function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+    document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.card'));
+    setTimeout(() => alertDiv.remove(), 5000);
+  }
+
+  function updateResultsTable(status) {
+    const tbody = document.getElementById('resultsBody');
+
+    // 기존 행이 있는지 확인
+    let row = tbody.querySelector(`tr[data-test-id="${status.testId}"]`);
+
+    if (!row) {
+      row = document.createElement('tr');
+      row.setAttribute('data-test-id', status.testId);
+      tbody.insertBefore(row, tbody.firstChild);
+    }
+
+    const statusText = getStatusText(status);
+    const statusClass = getStatusClass(status);
+
+    row.className = statusClass;
+    row.innerHTML = `
+            <td>${escapeHtml(status.description || '')}</td>
+            <td>${escapeHtml(status.url || '')}</td>
+            <td>${statusText}</td>
+            <td>${formatNumber(status.averageResponseTime)} ms</td>
+            <td>${formatNumber(status.maxResponseTime)} ms</td>
+            <td>${formatNumber(status.requestsPerSecond)}</td>
+            <td>${formatNumber(status.errorRate)}%</td>
+            <td>
+                <button class="btn btn-sm btn-info" onclick="showDetails('${status.testId}')">Details</button>
+            </td>
+        `;
+  }
+
+  function escapeHtml(unsafe) {
+    if (unsafe == null) {
+      return '';
+    }
+    return unsafe
+    .toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+  }
+
+  function formatNumber(value) {
+    if (value == null) {
+      return '-';
+    }
+    return typeof value === 'number' ? value.toFixed(2) : value;
+  }
+
+  function getStatusText(status) {
+    if (!status) {
+      return '-';
+    }
+    if (status.status === 'ERROR') {
+      return 'Error';
+    }
+    if (status.status === 'TIMEOUT') {
+      return 'Timeout';
+    }
+    if (status.completed) {
+      return 'Completed';
+    }
+    return 'Running';
+  }
+
+  function getStatusClass(status) {
+    if (!status) {
+      return '';
+    }
+    if (status.status === 'ERROR' || status.status === 'TIMEOUT') {
+      return 'table-danger';
+    }
+    if (status.completed) {
+      return status.errorRate > 10 ? 'table-warning' : 'table-success';
+    }
+    return 'table-info';
+  }
+
+  function showDetails(testId) {
+    // TODO: 상세 정보를 보여주는 모달 구현
+    alert('Details functionality coming soon!');
+  }
+
+  // 초기 테스트 결과 로딩
+  window.addEventListener('load', async () => {
+    try {
+      const response = await fetch('/performanceMeasure/results');
+      if (response.ok) {
+        const results = await response.json();
+        results.forEach(result => updateResultsTable(result));
+      } else {
+        console.log('No previous test results available');
+      }
+    } catch (error) {
+      console.error('Failed to load test results:', error);
+    }
+  });
+</script>
+</body>
+</html>
