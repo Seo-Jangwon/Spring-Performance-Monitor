@@ -16,7 +16,7 @@ A Spring Boot-based tool for simple performance testing and monitoring. It enabl
 - 실시간 테스트 진행 상황 모니터링 (Real-time test progress monitoring)
 
 #### 테스트 결과 메트릭 (Test Result Metrics)
-- 평균/최대 응응답 시간 (Average/Maximum response times)
+- 평균/최대 응답 시간 (Average/Maximum response times)
 - 초당 요청 수 (Requests Per Second)
 - 에러율 (Error rate)
 
