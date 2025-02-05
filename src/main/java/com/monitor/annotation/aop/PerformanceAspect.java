@@ -7,7 +7,9 @@ package com.monitor.annotation.aop;
 
 import com.monitor.annotation.annotation.PerformanceMeasure;
 import com.monitor.annotation.model.PerformanceData;
+import com.monitor.annotation.model.ThreadMetrics;
 import com.monitor.annotation.service.PerformanceMonitorService;
+import com.monitor.annotation.service.ThreadMonitorService;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -21,10 +23,19 @@ import org.springframework.stereotype.Component;
 public class PerformanceAspect {
 
     private final PerformanceMonitorService monitorService;
+    private final ThreadMonitorService threadMonitorService;
 
     @Around("@annotation(performanceMeasure)")
     public Object measurePerformance(ProceedingJoinPoint joinPoint,
         PerformanceMeasure performanceMeasure) throws Throwable {
+
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        String className = signature.getDeclaringType().getSimpleName();
+        String methodName = signature.getName();
+
+        // 메서드 스레드 모니터링 시작
+        ThreadMetrics threadMetrics = threadMonitorService.startMethodMonitoring(className, methodName);
+
         // 시작 시간과 메모리 측정
         long startTime = System.nanoTime();
         long startMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
@@ -34,14 +45,13 @@ public class PerformanceAspect {
             return joinPoint.proceed();
         } finally {
             // 종료 시간과 메모리 측정
-            long executionTime = (System.nanoTime() - startTime) / 1_000_000; // 나노초를 밀리초로 변환
+            long executionTime = (System.nanoTime() - startTime) / 1_000_000;
             long endMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-            long memoryUsed = (endMemory - startMemory) / 1024; // 바이트를 KB로 변환
+            long memoryUsed = (endMemory - startMemory) / 1024;
 
-            // 메서드 정보 추출
-            MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-            String className = signature.getDeclaringType().getSimpleName();
-            String methodName = signature.getName();
+            // 최종 스레드 메트릭 수집
+            threadMonitorService.updateMethodMetrics(className, methodName);
+            ThreadMetrics finalMetrics = threadMonitorService.getMethodMetrics(className, methodName);
 
             // 성능 데이터 저장
             PerformanceData performanceData = PerformanceData.of(
@@ -49,10 +59,14 @@ public class PerformanceAspect {
                 methodName,
                 performanceMeasure.value(),
                 executionTime,
-                memoryUsed
+                memoryUsed,
+                finalMetrics
             );
 
             monitorService.addPerformanceData(performanceData);
+
+            // 모니터링 종료
+            threadMonitorService.stopMethodMonitoring(className, methodName);
         }
     }
 }

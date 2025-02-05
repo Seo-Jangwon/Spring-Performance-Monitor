@@ -5,9 +5,10 @@
 
 package com.monitor.annotation.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.ArrayList;
 import lombok.Builder;
 import lombok.Getter;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -15,10 +16,15 @@ import java.util.List;
 @Builder
 public class TestResult {
 
+    @JsonIgnore
+    private final Object lock = new Object();
+
     private String testId;
     private String description;
     private String url;
     private String method;
+    private String className;
+    private String methodName;
     private boolean completed;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
@@ -30,7 +36,78 @@ public class TestResult {
     private double minResponseTime;
     private double requestsPerSecond;
     private double errorRate;
-    private List<Long> responseTimes;  // 모든 요청의 응답 시간 목록
-    private String status;           // 테스트 상태 (COMPLETED, ERROR, TIMEOUT 등)
-    private String errorMessage;    // 에러 메시지
+    private String status;
+    private String errorMessage;
+    private Long latestResponseTime;
+    private ThreadMetrics threadMetrics;
+
+    // 메모리 모니터링 관련
+    private double averageHeapUsage;
+    private double maxHeapUsage;
+    private int totalGCCount;
+    private long totalGCTime;
+
+    // mutable한 리스트들
+    @Builder.Default
+    private final List<MemoryMetrics> memoryMetrics = new ArrayList<>();
+    @Builder.Default
+    private final List<Long> responseTimes = new ArrayList<>();
+
+    public synchronized void updateThreadMetrics(ThreadMetrics metrics) {
+        this.threadMetrics = metrics;
+    }
+
+    public synchronized void updateProgress(int totalRequests, int successfulRequests,
+        int failedRequests) {
+        synchronized (lock) {
+            this.totalRequests = totalRequests;
+            this.successfulRequests = successfulRequests;
+            this.failedRequests = failedRequests;
+
+            if (totalRequests > 0) {
+                this.errorRate = failedRequests * 100.0 / totalRequests;
+                this.averageResponseTime = this.responseTimes.stream()
+                    .mapToLong(Long::valueOf)
+                    .average()
+                    .orElse(0.0);
+
+                double duration =
+                    java.time.Duration.between(startTime, LocalDateTime.now()).toMillis() / 1000.0;
+                this.requestsPerSecond = duration > 0 ? totalRequests / duration : 0;
+            }
+        }
+    }
+
+    public void addResponseTime(long responseTime) {
+        synchronized (lock) {
+            this.latestResponseTime = responseTime;
+            this.responseTimes.add(responseTime);
+            this.maxResponseTime = Math.max(this.maxResponseTime, responseTime);
+            this.minResponseTime = this.minResponseTime == 0 ? responseTime
+                : Math.min(this.minResponseTime, responseTime);
+            // 평균 응답시간도 업데이트
+            this.averageResponseTime = this.responseTimes.stream()
+                .mapToLong(Long::valueOf)
+                .average()
+                .orElse(0.0);
+        }
+    }
+
+    public synchronized void addMemoryMetric(MemoryMetrics metric) {
+        synchronized (lock) {
+            this.memoryMetrics.add(metric);
+
+            // 평균 힙 사용량 업데이트
+            this.averageHeapUsage = this.memoryMetrics.stream()
+                .mapToLong(MemoryMetrics::getHeapUsed)
+                .average()
+                .orElse(0.0);
+
+            // 최대 힙 사용량 업데이트
+            this.maxHeapUsage = this.memoryMetrics.stream()
+                .mapToLong(MemoryMetrics::getHeapUsed)
+                .max()
+                .orElse(0);
+        }
+    }
 }

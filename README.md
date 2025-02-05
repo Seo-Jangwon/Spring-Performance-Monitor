@@ -4,7 +4,8 @@
 </br>
 A Spring Boot-based tool for simple performance testing and monitoring. It enables load testing of API endpoints and method-level performance monitoring.
 
-![alt text](image.png)
+![alt text](<성능측정 어노테이션.png>)
+![alt text](<성능 측정 어노테이션 디테일.png>)
 
 ## 주요 기능 (Key Features)
 
