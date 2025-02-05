@@ -21,5 +21,5 @@ public class TestScenarioRequest {
     private int repeatCount;                // 반복 횟수
     private int rampUpSeconds;              // 부하 증가 시간(초)
     private String description;             // 테스트 설명
-    private int timeoutSeconds = 60; // 기본 타임아웃 60초
+    private int timeoutSeconds = 60;        // 기본 타임아웃 60초
 }

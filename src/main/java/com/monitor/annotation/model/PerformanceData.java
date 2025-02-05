@@ -20,9 +20,10 @@ public class PerformanceData {
     private LocalDateTime timestamp;  // 측정 시간
     private String className;         // 클래스 이름
     private boolean isSlowExecution;  // 성능 병목 여부
+    private ThreadMetrics threadMetrics; // 쓰레드 메트릭
 
     public static PerformanceData of(String className, String methodName, String description,
-        long executionTime, long memoryUsed) {
+        long executionTime, long memoryUsed, ThreadMetrics threadMetrics) {
         return PerformanceData.builder()
             .className(className)
             .methodName(methodName)
@@ -30,7 +31,8 @@ public class PerformanceData {
             .executionTime(executionTime)
             .memoryUsed(memoryUsed)
             .timestamp(LocalDateTime.now())
-            .isSlowExecution(executionTime > 1000) // 1초 이상 걸리면 병목
+            .isSlowExecution(executionTime > 1000)
+            .threadMetrics(threadMetrics)
             .build();
     }
 }
