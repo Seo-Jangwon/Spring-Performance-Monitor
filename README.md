@@ -79,9 +79,9 @@ A Spring Boot-based tool for simple performance testing and monitoring. It enabl
 ## Contributing
 
 1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/NewFeature`)
-3. Commit your Changes (`git commit -m 'feat: Add some NewFeature'`)
-4. Push to the Branch (`git push origin feature/NewFeature`)
+2. Create your Feature Branch (`git checkout -b feature/NewFeature[feature]`)
+3. Commit your Changes (`git commit -m 'feat: Add some NewFeature [feature]'`)
+4. Push to the Branch (`git push origin feature/NewFeature[feature]`)
 5. Open a Pull Request
 
 ## License
