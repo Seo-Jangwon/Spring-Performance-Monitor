@@ -7,6 +7,8 @@ package com.monitor.annotation.test;
 
 import com.monitor.annotation.annotation.PerformanceMeasure;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -35,5 +37,11 @@ public class TestController {
             sb.append("test data ");
         }
         return "Memory Test Complete";
+    }
+
+    @PerformanceMeasure("Post테스트")
+    @PostMapping("/post1")
+    public TestDto post(@RequestBody TestDto testDto) {
+        return testDto;
     }
 }

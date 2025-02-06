@@ -6,8 +6,8 @@
 package com.monitor.annotation.aop;
 
 import com.monitor.annotation.annotation.PerformanceMeasure;
-import com.monitor.annotation.model.PerformanceData;
-import com.monitor.annotation.model.ThreadMetrics;
+import com.monitor.annotation.dto.PerformanceData;
+import com.monitor.annotation.dto.ThreadMetrics;
 import com.monitor.annotation.service.PerformanceMonitorService;
 import com.monitor.annotation.service.ThreadMonitorService;
 import lombok.RequiredArgsConstructor;

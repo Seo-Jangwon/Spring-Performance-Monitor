@@ -5,10 +5,10 @@
 
 package com.monitor.annotation.service;
 
-import com.monitor.annotation.model.MemoryMetrics;
-import com.monitor.annotation.model.TestResult;
-import com.monitor.annotation.model.TestScenarioRequest;
-import com.monitor.annotation.model.ThreadMetrics;
+import com.monitor.annotation.dto.MemoryMetrics;
+import com.monitor.annotation.dto.TestResult;
+import com.monitor.annotation.dto.TestScenarioRequest;
+import com.monitor.annotation.dto.ThreadMetrics;
 import jakarta.annotation.PreDestroy;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -291,10 +291,10 @@ public class PerformanceTestService {
         long responseTime = (System.nanoTime() - startTime) / 1_000_000;
 
         responseTimes.add(responseTime);
-        TestResult currentResult = testResults.get(testId); // testId를 파라미터로 추가 필요
+        TestResult currentResult = testResults.get(testId);
 
         if (currentResult != null) {
-            currentResult.addResponseTime(responseTime); // 여기에 responseTime 추가
+            currentResult.addResponseTime(responseTime);
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 successCount.incrementAndGet();

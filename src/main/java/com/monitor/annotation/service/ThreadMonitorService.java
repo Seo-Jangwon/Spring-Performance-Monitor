@@ -3,10 +3,9 @@
  * Licensed under MIT License
  */
 
-
 package com.monitor.annotation.service;
 
-import com.monitor.annotation.model.ThreadMetrics;
+import com.monitor.annotation.dto.ThreadMetrics;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;

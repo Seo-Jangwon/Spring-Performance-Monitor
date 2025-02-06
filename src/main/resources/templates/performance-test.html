@@ -31,51 +31,167 @@ Licensed under MIT License
       max-width: 95%;
     }
 
-    .memory-stats {
-      padding: 10px;
-      border-radius: 4px;
-      margin-bottom: 15px;
+    .endpoint-card {
+      cursor: pointer;
+      transition: all 0.3s ease;
     }
 
-    .memory-stats h6 {
-      margin-bottom: 10px;
+    .endpoint-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .selected-endpoint {
+      border: 2px solid #0d6efd;
+      background-color: #f8f9fa;
+    }
+
+    .method-badge {
+      font-size: 0.8rem;
+      padding: 0.3rem 0.5rem;
+    }
+
+    .method-GET {
+      background-color: #28a745;
+    }
+
+    .method-POST {
+      background-color: #007bff;
+    }
+
+    .method-PUT {
+      background-color: #ffc107;
+    }
+
+    .method-DELETE {
+      background-color: #dc3545;
+    }
+
+    .services-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .service-item {
+      padding: 0.5rem;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .service-item:last-child {
+      border-bottom: none;
     }
   </style>
 </head>
 <body>
 <div class="container mt-4">
-  <h2>API Performance Test Dashboard</h2>
+  <h2>Performance Test Dashboard</h2>
 
-  <!-- 테스트 시나리오 입력 폼 -->
+  <!-- 엔드포인트 선택 섹션 -->
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">Available Endpoints</h4>
+      <div class="btn-group">
+        <button class="btn btn-outline-secondary btn-sm" onclick="toggleView('list')">List View
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="toggleView('card')">Card View
+        </button>
+      </div>
+    </div>
+    <div class="card-body">
+      <!-- 검색 및 필터링 -->
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <input type="text" class="form-control" id="endpointSearch"
+                 placeholder="Search endpoints...">
+        </div>
+        <div class="col-md-3">
+          <select class="form-select" id="methodFilter">
+            <option value="">All Methods</option>
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 엔드포인트 목록 (카드 뷰) -->
+      <div id="endpointCardsView" class="row g-3">
+        <!-- 카드들은 JS로 동적 생성됨 -->
+      </div>
+
+      <!-- 엔드포인트 목록 (리스트 뷰) -->
+      <div id="endpointListView" class="d-none">
+        <table class="table table-hover">
+          <thead>
+          <tr>
+            <th>Method</th>
+            <th>URL</th>
+            <th>Controller</th>
+            <th>Services</th>
+            <th>Actions</th>
+          </tr>
+          </thead>
+          <tbody id="endpointListBody">
+          <!-- 리스트 항목들은 JS로 동적 생성됨 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 테스트 설정 섹션 -->
   <div class="card mb-4">
     <div class="card-header">
-      <h4>New Test Scenario</h4>
+      <h4 class="mb-0">Test Configuration</h4>
     </div>
     <div class="card-body">
       <form id="testForm">
+
+
+        <!-- 선택된 엔드포인트 정보 -->
+        <div class="selected-endpoint-info mb-4">
+          <h5>Selected Endpoint</h5>
+          <div class="alert alert-info">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <strong id="selectedEndpointMethod">-</strong>
+                <span id="selectedEndpointUrl">No endpoint selected</span>
+              </div>
+              <span class="badge bg-secondary" id="endpoint-description">-</span>
+            </div>
+          </div>
+
+          <!-- URL Parameters -->
+          <div id="parameterSection" class="mt-3" style="display: none;">
+            <h6>URL Parameters</h6>
+            <!-- 동적 표시 -->
+          </div>
+
+          <!-- Request Body -->
+          <div id="requestBodySection" class="mt-3">
+            <h6>Request Body</h6>
+            <div class="mb-2">
+              <small class="text-muted">Request Type: <span id="requestType">-</span></small>
+            </div>
+            <div id="jsonEditor" style="height: 200px;"></div>
+          </div>
+        </div>
+
         <div class="mb-3">
           <label class="form-label">Description</label>
           <input type="text" class="form-control" id="description" required>
         </div>
+
+        <!--        &lt;!&ndash; Request Body Editor &ndash;&gt;-->
+        <!--        <div class="mb-3" id="requestBodySection">-->
+        <!--          <label class="form-label">Request Body</label>-->
+        <!--          <div id="jsonEditor" style="height: 200px;"></div>-->
+        <!--        </div>-->
+
+        <!-- Headers Section -->
         <div class="mb-3">
-          <label class="form-label">URL</label>
-          <input type="url" class="form-control" id="url" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">HTTP Method</label>
-          <select class="form-select" id="method">
-            <option>GET</option>
-            <option>POST</option>
-            <option>PUT</option>
-            <option>DELETE</option>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Request Body (JSON)</label>
-          <div id="jsonEditor" style="height: 200px;"></div>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Headers (Key-Value)</label>
+          <label class="form-label">Headers</label>
           <div id="headersContainer">
             <div class="header-row d-flex mb-2">
               <input type="text" class="form-control me-2" placeholder="Key">
@@ -85,6 +201,8 @@ Licensed under MIT License
             </div>
           </div>
         </div>
+
+        <!-- Test Parameters -->
         <div class="row">
           <div class="col-md-4">
             <div class="mb-3">
@@ -105,15 +223,21 @@ Licensed under MIT License
             </div>
           </div>
         </div>
-        <button type="submit" class="btn btn-primary">Run Test</button>
+
+        <button type="submit" class="btn btn-primary" id="runTestBtn" disabled>
+          Run Test
+        </button>
       </form>
     </div>
   </div>
 
   <!-- 테스트 결과 목록 -->
   <div class="card">
-    <div class="card-header">
-      <h4>Test Results</h4>
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">Test Results</h4>
+      <button class="btn btn-outline-secondary btn-sm" onclick="clearResults()">
+        Clear Results
+      </button>
     </div>
     <div class="card-body">
       <table class="table">
@@ -134,250 +258,254 @@ Licensed under MIT License
       </table>
     </div>
   </div>
+</div>
 
-  <!-- Details Modal -->
-  <div class="modal fade" id="detailsModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Test Details</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <!-- 성능 측정 결과 섹션 -->
-          <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-              <h5 class="card-title mb-0">Annotated Method Performance</h5>
-            </div>
-            <div class="card-body">
-              <!-- 기본 정보 -->
-              <div class="row mb-4">
-                <div class="col-md-6">
-                  <h6>Test Information</h6>
-                  <table class="table table-sm">
-                    <tr>
-                      <td>Description:</td>
-                      <td id="modal-description"></td>
-                    </tr>
-                    <tr>
-                      <td>URL:</td>
-                      <td id="modal-url"></td>
-                    </tr>
-                    <tr>
-                      <td>Method:</td>
-                      <td id="modal-method"></td>
-                    </tr>
-                    <tr>
-                      <td>Duration:</td>
-                      <td id="modal-duration"></td>
-                    </tr>
-                  </table>
-                </div>
-                <div class="col-md-6">
-                  <h6>Performance Results</h6>
-                  <table class="table table-sm">
-                    <tr>
-                      <td>Total Requests:</td>
-                      <td id="modal-total-requests"></td>
-                    </tr>
-                    <tr>
-                      <td>Success Rate:</td>
-                      <td id="modal-success-rate"></td>
-                    </tr>
-                    <tr>
-                      <td>Avg Response Time:</td>
-                      <td id="modal-avg-response"></td>
-                    </tr>
-                    <tr>
-                      <td>Requests/sec:</td>
-                      <td id="modal-rps"></td>
-                    </tr>
-                  </table>
-                </div>
+<div class="modal fade" id="detailsModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Test Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <!-- 성능 측정 결과 섹션 -->
+        <div class="card mb-4">
+          <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Annotated Method Performance</h5>
+          </div>
+          <div class="card-body">
+            <!-- 기본 정보 -->
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <h6>Test Information</h6>
+                <table class="table table-sm">
+                  <tr>
+                    <td>Description:</td>
+                    <td id="modal-description"></td>
+                  </tr>
+                  <tr>
+                    <td>URL:</td>
+                    <td id="modal-url"></td>
+                  </tr>
+                  <tr>
+                    <td>Method:</td>
+                    <td id="modal-method"></td>
+                  </tr>
+                  <tr>
+                    <td>Duration:</td>
+                    <td id="modal-duration"></td>
+                  </tr>
+                </table>
               </div>
+              <div class="col-md-6">
+                <h6>Performance Results</h6>
+                <table class="table table-sm">
+                  <tr>
+                    <td>Total Requests:</td>
+                    <td id="modal-total-requests"></td>
+                  </tr>
+                  <tr>
+                    <td>Success Rate:</td>
+                    <td id="modal-success-rate"></td>
+                  </tr>
+                  <tr>
+                    <td>Avg Response Time:</td>
+                    <td id="modal-avg-response"></td>
+                  </tr>
+                  <tr>
+                    <td>Requests/sec:</td>
+                    <td id="modal-rps"></td>
+                  </tr>
+                </table>
+              </div>
+            </div>
 
-              <!-- 응답 시간 차트 -->
-              <div class="row">
-                <div class="col-12">
-                  <div class="card">
-                    <div class="card-header">
-                      <h6 class="card-title">Response Time</h6>
-                    </div>
-                    <div class="card-body">
-                      <div class="chart-container">
-                        <canvas id="responseTimeChart"></canvas>
-                      </div>
+            <!-- 응답 시간 차트 -->
+            <div class="row">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="card-title">Response Time</h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="chart-container">
+                      <canvas id="responseTimeChart"></canvas>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- 시스템 모니터링 섹션 -->
-          <div class="card">
-            <div class="card-header bg-info text-white">
-              <h5 class="card-title mb-0">System Monitoring</h5>
+        <!-- 시스템 모니터링 섹션 -->
+        <div class="card">
+          <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">System Monitoring</h5>
+          </div>
+          <div class="card-body">
+            <!-- 메모리 차트 -->
+            <div class="row">
+              <div class="col-md-6 mb-4">
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="card-title">Heap Memory Usage</h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="chart-container">
+                      <canvas id="memoryChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6 mb-4">
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="card-title">Non-Heap Memory Usage</h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="chart-container">
+                      <canvas id="nonHeapChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="card-body">
-              <!-- 메모리 차트 -->
-              <div class="row">
-                <div class="col-md-6 mb-4">
-                  <div class="card">
-                    <div class="card-header">
-                      <h6 class="card-title">Heap Memory Usage</h6>
-                    </div>
-                    <div class="card-body">
-                      <div class="chart-container">
-                        <canvas id="memoryChart"></canvas>
-                      </div>
-                    </div>
+
+            <!-- 스레드 상태 차트 -->
+            <div class="row">
+              <div class="col-md-6 mb-4">
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="card-title">Thread Pool Status</h6>
                   </div>
-                </div>
-                <div class="col-md-6 mb-4">
-                  <div class="card">
-                    <div class="card-header">
-                      <h6 class="card-title">Non-Heap Memory Usage</h6>
-                    </div>
-                    <div class="card-body">
-                      <div class="chart-container">
-                        <canvas id="nonHeapChart"></canvas>
-                      </div>
+                  <div class="card-body">
+                    <div class="chart-container">
+                      <canvas id="threadChart"></canvas>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <!-- 스레드 상태 차트 -->
-              <div class="row">
-                <div class="col-md-6 mb-4">
-                  <div class="card">
-                    <div class="card-header">
-                      <h6 class="card-title">Thread Pool Status</h6>
-                    </div>
-                    <div class="card-body">
-                      <div class="chart-container">
-                        <canvas id="threadChart"></canvas>
-                      </div>
-                    </div>
+              <div class="col-md-6 mb-4">
+                <!-- Method Thread Metrics -->
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="card-title">Method Thread Details</h6>
                   </div>
-                </div>
-                <div class="col-md-6 mb-4">
-                  <!-- Method Thread Metrics -->
-                  <div class="card">
-                    <div class="card-header">
-                      <h6 class="card-title">Method Thread Details</h6>
-                    </div>
-                    <div class="card-body">
-                      <table class="table table-sm">
-                        <tr>
-                          <td>Thread Name:</td>
-                          <td id="method-thread-name">-</td>
-                        </tr>
-                        <tr>
-                          <td>Thread ID:</td>
-                          <td id="method-thread-id">-</td>
-                        </tr>
-                        <tr>
-                          <td>CPU Time:</td>
-                          <td id="method-cpu-time">-</td>
-                        </tr>
-                        <tr>
-                          <td>User Time:</td>
-                          <td id="method-user-time">-</td>
-                        </tr>
-                        <tr>
-                          <td>Thread State:</td>
-                          <td id="method-thread-state">-</td>
-                        </tr>
-                        <tr>
-                          <td>Priority:</td>
-                          <td id="method-thread-priority">-</td>
-                        </tr>
-                        <tr>
-                          <td>Is Daemon:</td>
-                          <td id="method-thread-daemon">-</td>
-                        </tr>
-                        <tr>
-                          <td>Stack Trace:</td>
-                          <td>
-                            <button class="btn btn-sm btn-info" onclick="showStackTrace()">
-                              View Stack Trace
-                            </button>
-                          </td>
-                        </tr>
-                      </table>
-                    </div>
+                  <div class="card-body">
+                    <table class="table table-sm">
+                      <tr>
+                        <td>Thread Name:</td>
+                        <td id="method-thread-name">-</td>
+                      </tr>
+                      <tr>
+                        <td>Thread ID:</td>
+                        <td id="method-thread-id">-</td>
+                      </tr>
+                      <tr>
+                        <td>CPU Time:</td>
+                        <td id="method-cpu-time">-</td>
+                      </tr>
+                      <tr>
+                        <td>User Time:</td>
+                        <td id="method-user-time">-</td>
+                      </tr>
+                      <tr>
+                        <td>Thread State:</td>
+                        <td id="method-thread-state">-</td>
+                      </tr>
+                      <tr>
+                        <td>Priority:</td>
+                        <td id="method-thread-priority">-</td>
+                      </tr>
+                      <tr>
+                        <td>Is Daemon:</td>
+                        <td id="method-thread-daemon">-</td>
+                      </tr>
+                      <tr>
+                        <td>Stack Trace:</td>
+                        <td>
+                          <button class="btn btn-sm btn-info" onclick="showStackTrace()">
+                            View Stack Trace
+                          </button>
+                        </td>
+                      </tr>
+                    </table>
                   </div>
                 </div>
               </div>
+            </div>
 
-              <!-- 메모리 상태 -->
-              <div class="row mt-4">
-                <div class="col-md-3">
-                  <div class="card">
-                    <div class="card-header">
-                      <h6 class="card-title">Heap Memory</h6>
-                    </div>
-                    <div class="card-body">
-                      <p class="mb-1">Used: <span id="modal-heap-used">0 MB</span></p>
-                      <p class="mb-1">Max: <span id="modal-heap-max">0 MB</span></p>
-                      <p class="mb-1">Young Gen: <span id="modal-young-gen">0 MB</span></p>
-                      <p class="mb-0">Old Gen: <span id="modal-old-gen">0 MB</span></p>
-                    </div>
+            <!-- 메모리 상태 -->
+            <div class="row mt-4">
+              <div class="col-md-3">
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="card-title">Heap Memory</h6>
                   </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="card">
-                    <div class="card-header">
-                      <h6 class="card-title">Non-Heap Memory</h6>
-                    </div>
-                    <div class="card-body">
-                      <p class="mb-1">Used: <span id="modal-nonheap-used">0 MB</span></p>
-                      <p class="mb-1">Committed: <span id="modal-nonheap-committed">0 MB</span></p>
-                      <p class="mb-0">Metaspace: <span id="modal-metaspace-used">0 MB</span></p>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="card">
-                    <div class="card-header">
-                      <h6 class="card-title">GC Activity</h6>
-                    </div>
-                    <div class="card-body">
-                      <p class="mb-1">Young Count: <span id="modal-young-gc-count">0</span></p>
-                      <p class="mb-1">Old Count: <span id="modal-old-gc-count">0</span></p>
-                      <p class="mb-0">Total Time: <span id="modal-gc-time">0 ms</span></p>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="card">
-                    <div class="card-header">
-                      <h6 class="card-title">Thread Pool</h6>
-                    </div>
-                    <div class="card-body">
-                      <p class="mb-1">Active: <span id="modal-active-threads">0</span></p>
-                      <p class="mb-1">Pool Size: <span id="modal-pool-size">0</span>/<span id="modal-max-pool-size">0</span></p>
-                      <p class="mb-0">Queue Size: <span id="modal-queue-size">0</span></p>
-                    </div>
+                  <div class="card-body">
+                    <p class="mb-1">Used: <span id="modal-heap-used">0 MB</span></p>
+                    <p class="mb-1">Max: <span id="modal-heap-max">0 MB</span></p>
+                    <p class="mb-1">Young Gen: <span id="modal-young-gen">0 MB</span></p>
+                    <p class="mb-0">Old Gen: <span id="modal-old-gen">0 MB</span></p>
                   </div>
                 </div>
               </div>
+              <div class="col-md-3">
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="card-title">Non-Heap Memory</h6>
+                  </div>
+                  <div class="card-body">
+                    <p class="mb-1">Used: <span id="modal-nonheap-used">0 MB</span></p>
+                    <p class="mb-1">Committed: <span id="modal-nonheap-committed">0 MB</span></p>
+                    <p class="mb-0">Metaspace: <span id="modal-metaspace-used">0 MB</span></p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="card-title">GC Activity</h6>
+                  </div>
+                  <div class="card-body">
+                    <p class="mb-1">Young Count: <span id="modal-young-gc-count">0</span></p>
+                    <p class="mb-1">Old Count: <span id="modal-old-gc-count">0</span></p>
+                    <p class="mb-0">Total Time: <span id="modal-gc-time">0 ms</span></p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="card-title">Thread Pool</h6>
+                  </div>
+                  <div class="card-body">
+                    <p class="mb-1">Active: <span id="modal-active-threads">0</span></p>
+                    <p class="mb-1">Pool Size: <span id="modal-pool-size">0</span>/<span
+                        id="modal-max-pool-size">0</span></p>
+                    <p class="mb-0">Queue Size: <span id="modal-queue-size">0</span></p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-              <!-- 스레드 상태 -->
-              <div class="row mt-3">
-                <div class="col-12">
-                  <div class="card">
-                    <div class="card-header">
-                      <h6 class="card-title">Thread States</h6>
-                    </div>
-                    <div class="card-body">
-                      <div class="d-flex justify-content-between">
-                        <div>Running: <span id="modal-running-threads" class="badge bg-success">0</span></div>
-                        <div>Waiting: <span id="modal-waiting-threads" class="badge bg-warning">0</span></div>
-                        <div>Blocked: <span id="modal-blocked-threads" class="badge bg-danger">0</span></div>
-                        <div>Total: <span id="modal-total-threads" class="badge bg-info">0</span></div>
+            <!-- 스레드 상태 -->
+            <div class="row mt-3">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-header">
+                    <h6 class="card-title">Thread States</h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                      <div>Running: <span id="modal-running-threads"
+                                          class="badge bg-success">0</span></div>
+                      <div>Waiting: <span id="modal-waiting-threads"
+                                          class="badge bg-warning">0</span></div>
+                      <div>Blocked: <span id="modal-blocked-threads"
+                                          class="badge bg-danger">0</span></div>
+                      <div>Total: <span id="modal-total-threads" class="badge bg-info">0</span>
                       </div>
                     </div>
                   </div>
@@ -389,27 +517,57 @@ Licensed under MIT License
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Stack Trace Modal -->
-  <div class="modal fade" id="stackTraceModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Stack Trace</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <pre id="stack-trace-content" style="max-height: 500px; overflow-y: auto;"></pre>
-        </div>
+<!-- Stack Trace Modal -->
+<div class="modal fade" id="stackTraceModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Stack Trace</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <pre id="stack-trace-content" style="max-height: 500px; overflow-y: auto;"></pre>
       </div>
     </div>
   </div>
-
+</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsoneditor@9.5.5/dist/jsoneditor.min.js"></script>
+
+<template id="endpointCardTemplate">
+  <div class="col-md-6 col-lg-4">
+    <div class="card endpoint-card" onclick="selectEndpoint(this)" data-endpoint-id="">
+      <div class="card-header">
+        <span class="badge method-badge"></span>
+        <small class="float-end text-muted"></small>
+      </div>
+      <div class="card-body">
+        <h6 class="card-title text-truncate"></h6>
+        <p class="card-text small"></p>
+        <div class="services-list">
+          <!-- Service items will be added here -->
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script th:inline="javascript">
+  // 전역 변수
+  let endpointsData = {};
+  let selectedEndpoint = null;
+  let currentView = 'card'; // 'card' or 'list'
+
+  // 차트 객체
+  let responseTimeChart = null;
+  let memoryUsageChart = null;
+  let nonHeapChart = null;
+  let threadChart = null;
+
   // JSON 에디터 초기화
   const container = document.getElementById('jsonEditor');
   const editor = new JSONEditor(container, {
@@ -418,10 +576,6 @@ Licensed under MIT License
     mainMenuBar: false
   });
   editor.set({}); // 빈 객체로 초기화
-
-  // 차트 객체
-  let responseTimeChart = null;
-  let memoryUsageChart = null;
 
   // 헤더 추가/제거 기능
   document.addEventListener('click', function (e) {
@@ -580,16 +734,28 @@ Licensed under MIT License
     .then(response => response.json())
     .then(result => {
       updateModalContent(result);
-
-      // 초기 차트 설정
       initializeCharts();
 
-      // 테스트가 완료된 상태면 전체 데이터로 한 번만 업데이트
       if (result.completed) {
-        const chartData = prepareChartData(result);
-        updateAllChartsWithHistory(chartData);
+        // 저장된 상태가 있는지 먼저 확인
+        const savedState = localStorage.getItem(`test_${testId}`);
+
+        if (savedState) {
+          const state = JSON.parse(savedState);
+          if (state.metrics) {
+            updateMemoryMetrics(state.metrics);
+          }
+          if (state.threadMetrics) {
+            updateMethodThreadMetrics(state.threadMetrics);
+          }
+        }
+
+        // result에 memoryMetrics가 있는 경우에만 차트 데이터 준비
+        if (result.memoryMetrics && result.memoryMetrics.length > 0) {
+          const chartData = prepareChartData(result);
+          updateAllChartsWithHistory(chartData);
+        }
       } else {
-        // 진행 중인 경우에만 웹소켓 연결
         connectWebSocket(testId);
       }
 
@@ -603,16 +769,26 @@ Licensed under MIT License
 
   // 차트 데이터 준비 함수
   function prepareChartData(testResult) {
+    if (!testResult.memoryMetrics || !Array.isArray(testResult.memoryMetrics)) {
+      return {
+        labels: [],
+        memoryData: {heap: [], young: [], old: []},
+        nonHeapData: {nonHeap: [], metaspace: []},
+        threadPoolData: {active: [], queue: [], pool: []},
+        responseTimeData: testResult.responseTimes || []
+      };
+    }
+
     return {
       labels: testResult.memoryMetrics.map(m => formatTime(m.timestamp)),
       memoryData: {
-        heap: testResult.memoryMetrics.map(m => m.heapUsed / (1024 * 1024)),
-        young: testResult.memoryMetrics.map(m => m.youngGenUsed / (1024 * 1024)),
-        old: testResult.memoryMetrics.map(m => m.oldGenUsed / (1024 * 1024))
+        heap: testResult.memoryMetrics.map(m => (m.heapUsed || 0) / (1024 * 1024)),
+        young: testResult.memoryMetrics.map(m => (m.youngGenUsed || 0) / (1024 * 1024)),
+        old: testResult.memoryMetrics.map(m => (m.oldGenUsed || 0) / (1024 * 1024))
       },
       nonHeapData: {
-        nonHeap: testResult.memoryMetrics.map(m => m.nonHeapUsed / (1024 * 1024)),
-        metaspace: testResult.memoryMetrics.map(m => m.metaspaceUsed / (1024 * 1024))
+        nonHeap: testResult.memoryMetrics.map(m => (m.nonHeapUsed || 0) / (1024 * 1024)),
+        metaspace: testResult.memoryMetrics.map(m => (m.metaspaceUsed || 0) / (1024 * 1024))
       },
       threadPoolData: {
         active: testResult.memoryMetrics.map(m => m.performanceThreadPool?.activeThreads || 0),
@@ -724,20 +900,39 @@ Licensed under MIT License
       ws.onmessage = function (event) {
         try {
           const data = JSON.parse(event.data);
+          console.log('WebSocket received data:', data);
+
+          // 상태 저장 변수
+          let lastThreadMetrics = null;
+
+          if (data.threadMetrics) {
+            lastThreadMetrics = data.threadMetrics;
+            updateMethodThreadMetrics(data.threadMetrics);
+          }
 
           if (data.testStatus) {
             updateTestStatus(data.testStatus);
+
+            // 테스트 완료시에도 마지막 스레드 메트릭 사용
+            if (data.testStatus.completed && lastThreadMetrics) {
+              updateMethodThreadMetrics(lastThreadMetrics);
+            }
           }
 
           if (data.metrics) {
             updateMemoryMetrics(data.metrics);
+            updateChartsWithNewData(data.metrics, data.testStatus);
           }
 
-          if (data.threadMetrics) {
-            updateMethodThreadMetrics(data.threadMetrics);
+          // 테스트 완료시 처리
+          if (data.testStatus && data.testStatus.completed) {
+            const finalState = {
+              metrics: data.metrics,
+              threadMetrics: lastThreadMetrics || data.threadMetrics,
+              testStatus: data.testStatus
+            };
+            localStorage.setItem(`test_${data.testStatus.testId}`, JSON.stringify(finalState));
           }
-
-          updateChartsWithNewData(data.metrics, data.testStatus);
 
         } catch (error) {
           console.error('Error handling WebSocket message:', error);
@@ -787,11 +982,39 @@ Licensed under MIT License
     } catch (error) {
       console.error('Error updating test status:', error);
     }
+
+    if (testStatus.responseTimes && testStatus.responseTimes.length > 0) {
+      responseTimeChart.data = {
+        labels: testStatus.responseTimes.map((_, i) => i + 1),
+        datasets: [{
+          label: 'Response Time (ms)',
+          data: testStatus.responseTimes,
+          borderColor: 'rgb(75, 192, 192)',
+          tension: 0.1
+        }]
+      };
+      responseTimeChart.update('none');  // 애니메이션 없이 즉시 업데이트
+    }
   }
 
   function updateMemoryMetrics(metrics) {
     if (!metrics) {
       return;
+    }
+
+    // 값을 저장할 변수
+    let lastMetrics = metrics;
+
+    // 이전에 저장된 값이 있으면 사용
+    const savedMetrics = localStorage.getItem('lastMemoryMetrics');
+    if (savedMetrics) {
+      lastMetrics = JSON.parse(savedMetrics);
+    }
+
+    // 현재 메트릭이 유효하면 저장
+    if (metrics.heapUsed) {
+      localStorage.setItem('lastMemoryMetrics', JSON.stringify(metrics));
+      lastMetrics = metrics;
     }
 
     // 힙 메모리 업데이트
@@ -824,9 +1047,6 @@ Licensed under MIT License
       updateElement('modal-total-threads', metrics.threadCount);
     }
   }
-
-  let nonHeapChart = null;
-  let threadChart = null;
 
   function initializeCharts() {
     if (memoryUsageChart) {
@@ -955,9 +1175,9 @@ Licensed under MIT License
       return;
     }
 
-    if (testStatus.completed) {
-      return;
-    }
+    // if (testStatus.completed) {
+    //   return;
+    // }
 
     // 힙 메모리 차트
     updateHeapMemoryChart(metrics);
@@ -1020,7 +1240,7 @@ Licensed under MIT License
     threadChart.data.datasets[0].data.push(pool.activeThreads);
     threadChart.data.datasets[1].data.push(pool.queueSize);
 
-    // 새로운 데이터셋 추가
+    // 새로운 데이터셋
     if (threadChart.data.datasets.length === 2) {
       threadChart.data.datasets.push({
         label: 'Pool Size',
@@ -1050,31 +1270,22 @@ Licensed under MIT License
 
   // 메서드별 스레드 메트릭 업데이트
   function updateMethodThreadMetrics(threadMetrics) {
+    console.log('Updating thread metrics:', threadMetrics);
     if (!threadMetrics) {
       clearMethodThreadMetrics();
       return;
     }
 
-    // DOM 업데이트 전에 값 체크 및 포맷팅
-    const threadName = threadMetrics.threadName || '-';
-    const threadId = threadMetrics.threadId || '-';
-    const cpuTime = threadMetrics.threadCpuTime ? formatDuration(threadMetrics.threadCpuTime) : '-';
-    const userTime = threadMetrics.threadUserTime ? formatDuration(threadMetrics.threadUserTime)
-        : '-';
-    const threadState = threadMetrics.threadState || '-';
-    const priority = threadMetrics.priority || '-';
-    const isDaemon = threadMetrics.isDaemon != null ? (threadMetrics.isDaemon ? 'Yes' : 'No') : '-';
+    // Thread 정보 업데이트
+    updateElement('method-thread-name', threadMetrics.threadName || '-');
+    updateElement('method-thread-id', threadMetrics.threadId || '-');
+    updateElement('method-cpu-time', formatDuration(threadMetrics.threadCpuTime) || '-');
+    updateElement('method-user-time', formatDuration(threadMetrics.threadUserTime) || '-');
+    updateElement('method-thread-state', threadMetrics.threadState || '-');
+    updateElement('method-thread-priority', threadMetrics.priority || '-');
+    updateElement('method-thread-daemon',
+        threadMetrics.isDaemon != null ? (threadMetrics.isDaemon ? 'Yes' : 'No') : '-');
 
-    // DOM 업데이트
-    document.getElementById('method-thread-name').textContent = threadName;
-    document.getElementById('method-thread-id').textContent = threadId;
-    document.getElementById('method-cpu-time').textContent = cpuTime;
-    document.getElementById('method-user-time').textContent = userTime;
-    document.getElementById('method-thread-state').textContent = threadState;
-    document.getElementById('method-thread-priority').textContent = priority;
-    document.getElementById('method-thread-daemon').textContent = isDaemon;
-
-    // 스택 트레이스 저장
     window.currentStackTrace = threadMetrics.stackTrace || null;
   }
 
@@ -1253,18 +1464,276 @@ Licensed under MIT License
     return date.toLocaleTimeString();
   }
 
-  // 초기 테스트 결과 로딩
+  // 페이지 로드 시 초기화
   window.addEventListener('load', async () => {
     try {
-      const response = await fetch('/performanceMeasure/results');
+      // 엔드포인트 데이터 로드
+      const response = await fetch('/performanceMeasure/endpoints');
       if (response.ok) {
-        const results = await response.json();
+        endpointsData = await response.json();
+        initializeEndpointView();
+      }
+
+      // 테스트 결과 로드
+      const resultsResponse = await fetch('/performanceMeasure/results');
+      if (resultsResponse.ok) {
+        const results = await resultsResponse.json();
         results.forEach(result => updateResultsTable(result));
       }
     } catch (error) {
-      console.error('Failed to load test results:', error);
+      console.error('Failed to load initial data:', error);
+      showError('Failed to load test endpoints');
     }
   });
+
+  // 엔드포인트 뷰 초기화
+  function initializeEndpointView() {
+    const cardsContainer = document.getElementById('endpointCardsView');
+    const listBody = document.getElementById('endpointListBody');
+
+    cardsContainer.innerHTML = '';
+    listBody.innerHTML = '';
+
+    // 엔드포인트 정렬 (HTTP 메서드 순)
+    const sortedMethods = Object.keys(endpointsData).sort();
+
+    sortedMethods.forEach(method => {
+      endpointsData[method].forEach((endpoint, index) => {
+
+        addEndpointCard(endpoint, method, index);
+        addEndpointListItem(endpoint, method, index);
+      });
+    });
+
+    // 검색 및 필터 이벤트 리스너 설정
+    setupSearchAndFilter();
+  }
+
+  // 엔드포인트 카드
+  function addEndpointCard(endpoint, method, index) {
+    const template = document.getElementById('endpointCardTemplate');
+    const card = template.content.cloneNode(true);
+
+    const cardDiv = card.querySelector('.endpoint-card');
+    cardDiv.dataset.endpointId = `${method}-${index}`;
+
+    const badge = card.querySelector('.method-badge');
+    badge.textContent = method;
+    badge.classList.add(`method-${method}`);
+
+    const title = card.querySelector('.card-title');
+    title.textContent = endpoint.endpointUrl;
+
+    const controller = card.querySelector('.card-text');
+    controller.textContent = `${endpoint.controllerClassName}.${endpoint.controllerMethodName}`;
+
+    const servicesList = card.querySelector('.services-list');
+    if (endpoint.annotatedServices && endpoint.annotatedServices.length > 0) {
+      endpoint.annotatedServices.forEach(service => {
+        const serviceItem = document.createElement('div');
+        serviceItem.className = 'service-item small';
+        serviceItem.innerHTML = `
+                <div class="fw-bold">${service.serviceClassName}.${service.methodName}</div>
+                <small class="text-muted">${service.description || 'No description'}</small>
+            `;
+        servicesList.appendChild(serviceItem);
+      });
+    } else {
+      const emptyItem = document.createElement('div');
+      emptyItem.className = 'service-item small text-muted';
+      emptyItem.textContent = 'No annotated services';
+      servicesList.appendChild(emptyItem);
+    }
+
+    document.getElementById('endpointCardsView').appendChild(card);
+  }
+
+  // 엔드포인트 리스트 항목
+  function addEndpointListItem(endpoint, method, index) {
+    const tr = document.createElement('tr');
+    tr.dataset.endpointId = `${method}-${index}`;
+
+    tr.innerHTML = `
+        <td><span class="badge method-badge method-${method}">${method}</span></td>
+        <td>${endpoint.endpointUrl}</td>
+        <td>${endpoint.controllerClassName}.${endpoint.controllerMethodName}</td>
+        <td>${endpoint.annotatedServices?.length || 0} services</td>
+        <td>
+            <button class="btn btn-sm btn-primary" onclick="selectEndpoint(this.closest('tr'))">
+                Select
+            </button>
+        </td>
+    `;
+
+    document.getElementById('endpointListBody').appendChild(tr);
+  }
+
+  // 검색 및 필터 설정
+  function setupSearchAndFilter() {
+    const searchInput = document.getElementById('endpointSearch');
+    const methodFilter = document.getElementById('methodFilter');
+
+    const filterEndpoints = () => {
+      const searchTerm = searchInput.value.toLowerCase();
+      const selectedMethod = methodFilter.value;
+
+      const cards = document.querySelectorAll('.endpoint-card');
+      const rows = document.querySelectorAll('#endpointListBody tr');
+
+      [...cards, ...rows].forEach(element => {
+        const id = element.dataset.endpointId;
+        const [method, index] = id.split('-');
+        const endpoint = endpointsData[method][index];
+
+        const matchesSearch = endpoint.endpointUrl.toLowerCase().includes(searchTerm) ||
+            endpoint.controllerClassName.toLowerCase().includes(searchTerm);
+        const matchesMethod = !selectedMethod || method === selectedMethod;
+
+        element.style.display = (matchesSearch && matchesMethod) ? '' : 'none';
+      });
+    };
+
+    searchInput.addEventListener('input', filterEndpoints);
+    methodFilter.addEventListener('change', filterEndpoints);
+  }
+
+  // 엔드포인트 선택
+  function selectEndpoint(element) {
+    // 이전 선택 해제
+    document.querySelectorAll('.selected-endpoint').forEach(el =>
+        el.classList.remove('selected-endpoint'));
+
+    // 새로운 선택
+    element.classList.add('selected-endpoint');
+    const [method, index] = element.dataset.endpointId.split('-');
+    selectedEndpoint = {
+      ...endpointsData[method][index],
+      httpMethod: method
+    };
+
+    console.log('Selected Endpoint:', selectedEndpoint); // 디버깅용
+
+    // UI 업데이트
+    const methodEl = document.getElementById('selectedEndpointMethod');
+    const urlEl = document.getElementById('selectedEndpointUrl');
+    const descEl = document.getElementById('endpoint-description');
+    const requestTypeEl = document.getElementById('requestType');
+    const requestBodySection = document.getElementById('requestBodySection');
+
+    if (methodEl) {
+      methodEl.textContent = selectedEndpoint.httpMethod;
+    }
+    if (urlEl) {
+      urlEl.textContent = selectedEndpoint.endpointUrl;
+    }
+    if (descEl) {
+      descEl.textContent = selectedEndpoint.description || '-';
+    }
+    if (requestTypeEl) {
+      requestTypeEl.textContent = selectedEndpoint.requestType;
+    }
+
+    // Request Body 섹션 표시/숨김 처리
+    if (selectedEndpoint.httpMethod === 'POST' ||
+        selectedEndpoint.httpMethod === 'PUT' ||
+        (selectedEndpoint.requestType &&
+            selectedEndpoint.requestType.toLowerCase() !== 'void')) {
+      requestBodySection.style.display = 'block';
+      if (editor) {
+        if (selectedEndpoint.requestExample &&
+            Object.keys(selectedEndpoint.requestExample).length > 0) {
+          console.log('Setting request example:', selectedEndpoint.requestExample);
+          editor.set(selectedEndpoint.requestExample);
+        } else {
+          console.log('No request example available, setting empty object');
+          editor.set({
+            id: 0,
+            name: "example"
+          });
+        }
+      }
+    } else {
+      console.log('Hiding request body section for endpoint:', selectedEndpoint);
+      requestBodySection.style.display = 'none';
+    }
+
+    // Run Test 버튼 활성화
+    const runTestBtn = document.getElementById('runTestBtn');
+    if (runTestBtn) {
+      runTestBtn.disabled = false;
+    }
+  }
+
+  // 뷰 전환 (카드/리스트)
+  function toggleView(viewType) {
+    const cardView = document.getElementById('endpointCardsView');
+    const listView = document.getElementById('endpointListView');
+
+    if (viewType === 'card') {
+      cardView.classList.remove('d-none');
+      listView.classList.add('d-none');
+      currentView = 'card';
+    } else {
+      cardView.classList.add('d-none');
+      listView.classList.remove('d-none');
+      currentView = 'list';
+    }
+  }
+
+  // 결과 클리어
+  function clearResults() {
+    document.getElementById('resultsBody').innerHTML = '';
+  }
+
+  // 테스트 폼 제출 처리
+  document.getElementById('testForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (!selectedEndpoint) {
+      showError('Please select an endpoint first');
+      return;
+    }
+
+    let jsonBody;
+    try {
+      jsonBody = editor.get();
+    } catch (error) {
+      showError('Invalid JSON in request body');
+      return;
+    }
+
+    const requestData = {
+      description: document.getElementById('description').value,
+      url: window.location.origin + selectedEndpoint.endpointUrl,
+      method: selectedEndpoint.httpMethod,
+      requestBody: JSON.stringify(jsonBody),
+      headers: getHeaders(),
+      concurrentUsers: parseInt(document.getElementById('concurrentUsers').value),
+      repeatCount: parseInt(document.getElementById('repeatCount').value),
+      rampUpSeconds: parseInt(document.getElementById('rampUpSeconds').value)
+    };
+
+    try {
+      const response = await fetch('/performanceMeasure/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      if (response.ok) {
+        const testId = await response.text();
+        showSuccess('Test started successfully');
+        pollTestStatus(testId);
+      } else {
+        throw new Error('Failed to start test');
+      }
+    } catch (error) {
+      showError('Error starting test: ' + error.message);
+    }
+  });
+
 </script>
 </body>
 </html>

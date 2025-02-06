@@ -8,9 +8,9 @@ package com.monitor.annotation.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.monitor.annotation.model.MemoryMetrics;
-import com.monitor.annotation.model.TestResult;
-import com.monitor.annotation.model.ThreadMetrics;
+import com.monitor.annotation.dto.MemoryMetrics;
+import com.monitor.annotation.dto.TestResult;
+import com.monitor.annotation.dto.ThreadMetrics;
 import com.monitor.annotation.service.MemoryMonitorService;
 import com.monitor.annotation.service.PerformanceTestService;
 import com.monitor.annotation.service.ThreadMonitorService;
@@ -86,7 +86,7 @@ public class MetricsWebSocketHandler extends TextWebSocketHandler {
 
                     if (testResult.isCompleted()) {
                         log.info("Test completed for session: {}", session.getId());
-                        Thread.sleep(1000);  // 마지막 메트릭을 보내기 위한 대기
+                        Thread.sleep(1000);  // 마지막 메트릭 보내기 위한 대기
                         session.close();
                         sessionTestMap.remove(session);
                     }
