@@ -5,7 +5,7 @@
 
 package com.monitor.annotation.service;
 
-import com.monitor.annotation.model.PerformanceData;
+import com.monitor.annotation.dto.PerformanceData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

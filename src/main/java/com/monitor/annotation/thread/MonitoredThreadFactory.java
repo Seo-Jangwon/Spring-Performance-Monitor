@@ -3,7 +3,6 @@
  * Licensed under MIT License
  */
 
-
 package com.monitor.annotation.thread;
 
 import com.monitor.annotation.service.ThreadMonitorService;

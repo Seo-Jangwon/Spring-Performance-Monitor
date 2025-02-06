@@ -3,7 +3,7 @@
  * Licensed under MIT License
  */
 
-package com.monitor.annotation.model;
+package com.monitor.annotation.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.ArrayList;

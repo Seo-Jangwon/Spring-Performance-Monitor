@@ -5,14 +5,12 @@
 
 package com.monitor.annotation.service;
 
-import com.monitor.annotation.model.MemoryMetrics;
-import com.monitor.annotation.model.ThreadMetrics;
+import com.monitor.annotation.dto.MemoryMetrics;
+import com.monitor.annotation.dto.ThreadMetrics;
 import java.time.LocalDateTime;
-import java.util.concurrent.ThreadPoolExecutor;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
