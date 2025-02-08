@@ -18,12 +18,12 @@ public class PerformanceEndpoint {
 
     private String endpointUrl;             // API URL
     private String httpMethod;              // HTTP Method
-    private String controllerClassName;     // 컨트롤러 클래스명
-    private String controllerMethodName;    // 컨트롤러 메서드명
-    private String requestType;             // 요청 파라미터 타입 (클래스명)
-    private String responseType;            // 응답 타입 (클래스명)
-    private String description;             // 어노테이션 설명
-    private List<ServiceMethodInfo> annotatedServices;  // 연관된 서비스 정보들
-    private Map<String, String> parameters;             // URL 파라미터 정보
-    private Map<String, String> requestExample;         // 요청 예시
+    private String controllerClassName;     // Controller class name
+    private String controllerMethodName;    // Controller method name
+    private String requestType;             // Request parameter type (class name)
+    private String responseType;            // Response type (class name)
+    private String description;             // Annotation description
+    private List<ServiceMethodInfo> annotatedServices;  // Associated service information
+    private Map<String, String> parameters;             // URL parameter information
+    private Map<String, Object> requestExample;         // Request example
 }

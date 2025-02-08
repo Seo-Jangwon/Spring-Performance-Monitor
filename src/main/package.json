@@ -1,0 +1,19 @@
+{
+  "name": "main",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Seo-Jangwon/Spring-Performance-Monitor.git"
+  },
+  "private": true,
+  "dependencies": {
+    "bootstrap": "^5.3.3",
+    "chart.js": "^4.4.7",
+    "jsoneditor": "^10.1.2"
+  }
+}

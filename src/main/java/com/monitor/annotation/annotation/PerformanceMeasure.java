@@ -14,5 +14,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface PerformanceMeasure {
 
-    String value() default "";  // 측정하고자 하는 메서드에 대한 설명
+    // Description of the method to be measured
+    String value() default "";
 }
