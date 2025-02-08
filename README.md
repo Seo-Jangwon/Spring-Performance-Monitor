@@ -1,4 +1,4 @@
-# Spring Performance Monitor
+# SSPMA (Simple-Spring-Performance-Measuring-Annotation)
 
 A Spring Boot performance testing and monitoring tool that can be easily used with a single annotation. It provides real-time monitoring through WebSocket communication, memory tracking, and detailed thread analysis.
 
