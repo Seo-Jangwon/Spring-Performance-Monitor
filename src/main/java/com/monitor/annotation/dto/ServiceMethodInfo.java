@@ -14,7 +14,7 @@ import lombok.ToString;
 @ToString
 public class ServiceMethodInfo {
 
-    private String serviceClassName;  // 서비스 클래스명
-    private String methodName;        // 메서드명
-    private String description;       // 어노테이션에 달린 설명
+    private String serviceClassName;
+    private String methodName;
+    private String description;
 }

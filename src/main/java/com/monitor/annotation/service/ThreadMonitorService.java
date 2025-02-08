@@ -18,6 +18,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 
+/**
+ * Service for monitoring thread behavior and collecting thread metrics.
+ * Provides comprehensive thread monitoring capabilities including:
+ * - Thread lifecycle management
+ * - CPU time tracking
+ * - Thread pool statistics
+ * - Parent-child thread relationship tracking
+ */
 @Slf4j
 @Service
 public class ThreadMonitorService {
@@ -33,12 +41,23 @@ public class ThreadMonitorService {
         this.performanceExecutor = performanceExecutor;
     }
 
+    /**
+     * Initializes thread monitoring features and configures MXBean settings.
+     */
     @PostConstruct
     public void init() {
         threadMXBean.setThreadCpuTimeEnabled(true);
         threadMXBean.setThreadContentionMonitoringEnabled(true);
     }
 
+    /**
+     * Starts monitoring a method's thread execution.
+     * Creates initial thread metrics and establishes monitoring context.
+     *
+     * @param className The class containing the method
+     * @param methodName The method to monitor
+     * @return Initial thread metrics
+     */
     public ThreadMetrics startMethodMonitoring(String className, String methodName) {
         String key = className + "." + methodName;
         Thread currentThread = Thread.currentThread();
@@ -64,6 +83,13 @@ public class ThreadMonitorService {
         return metrics;
     }
 
+    /**
+     * Updates thread metrics for a specific method.
+     * Collects current thread states, CPU times, and pool statistics.
+     *
+     * @param className The class containing the method
+     * @param methodName The method being monitored
+     */
     public void updateMethodMetrics(String className, String methodName) {
         String key = className + "." + methodName;
         ThreadMetrics metrics = methodMetrics.get(key);
@@ -81,11 +107,8 @@ public class ThreadMonitorService {
             return;
         }
 
-        // 스레드 상태 업데이트
         updateThreadStates(metrics);
-        // CPU 시간 업데이트
         updateCpuTimes(metrics);
-        // 스레드 풀 메트릭 업데이트
         updateThreadPoolMetrics(metrics);
     }
 
@@ -167,43 +190,92 @@ public class ThreadMonitorService {
         }
 
         try {
+            // CPU 시간 측정 지원 여부 체크
+            if (!threadMXBean.isThreadCpuTimeSupported() || !threadMXBean.isThreadCpuTimeEnabled()) {
+                log.warn("Thread CPU time measurement not supported or not enabled");
+                return;
+            }
+
             long id = metrics.getThreadId();
-            metrics.setThreadCpuTime(threadMXBean.getThreadCpuTime(id));
-            metrics.setThreadUserTime(threadMXBean.getThreadUserTime(id));
+            long cpuTime = threadMXBean.getThreadCpuTime(id);
+            long userTime = threadMXBean.getThreadUserTime(id);
+
+            // -1은 스레드가 존재하지 않거나 죽은 경우
+            if (cpuTime != -1) {
+                metrics.setThreadCpuTime(cpuTime);
+            }
+            if (userTime != -1) {
+                metrics.setThreadUserTime(userTime);
+            }
 
             if (metrics.getChildThreads() != null) {
+
                 updateChildThreadCpuTimes(metrics);
             }
         } catch (Exception e) {
-            log.error("Error updating CPU times: {}", e.getMessage());
+            log.error("Error updating CPU times: {}", e.getMessage(), e);
         }
     }
 
     private void updateChildThreadCpuTimes(ThreadMetrics metrics) {
-        if (metrics.getChildThreads() != null) {
-            for (ThreadMetrics childMetric : metrics.getChildThreads().values()) {
-                if (childMetric.getThreadId() > 0) {
-                    long childId = childMetric.getThreadId();
-                    childMetric.setThreadCpuTime(threadMXBean.getThreadCpuTime(childId));
-                    childMetric.setThreadUserTime(threadMXBean.getThreadUserTime(childId));
+        if (metrics.getChildThreads() == null) {
+            return;
+        }
+
+        for (ThreadMetrics childMetric : metrics.getChildThreads().values()) {
+            if (childMetric.getThreadId() > 0) {
+                long childId = childMetric.getThreadId();
+                long cpuTime = threadMXBean.getThreadCpuTime(childId);
+                long userTime = threadMXBean.getThreadUserTime(childId);
+
+                if (cpuTime != -1) {
+                    childMetric.setThreadCpuTime(cpuTime);
+                }
+                if (userTime != -1) {
+                    childMetric.setThreadUserTime(userTime);
                 }
             }
         }
     }
 
+    /**
+     * Retrieves the current metrics for a method.
+     * Returns the last known metrics if the method is no longer being monitored.
+     *
+     * @param className The class containing the method
+     * @param methodName The method name
+     * @return Current or last known thread metrics
+     */
     public ThreadMetrics getMethodMetrics(String className, String methodName) {
         String key = className + "." + methodName;
         ThreadMetrics metrics = methodMetrics.get(key);
+        if (metrics == null) {
+            // 활성 메트릭이 없으면 마지막 저장된 메트릭 반환
+            metrics = lastMetrics.get(key);
+        }
         if (metrics != null) {
             updateMetrics(metrics);
         }
         return metrics;
     }
 
+    private final Map<String, ThreadMetrics> lastMetrics = new ConcurrentHashMap<>();
+
+    /**
+     * Stops monitoring a method's thread execution.
+     * Saves final metrics and cleans up monitoring resources.
+     *
+     * @param className The class containing the method
+     * @param methodName The method being monitored
+     */
     public void stopMethodMonitoring(String className, String methodName) {
         String key = className + "." + methodName;
-        ThreadMetrics metrics = methodMetrics.remove(key);
+        ThreadMetrics metrics = methodMetrics.get(key);
         if (metrics != null) {
+            // 마지막 상태 저장
+            lastMetrics.put(key, metrics.clone());
+
+            methodMetrics.remove(key);
             threadToMethod.remove(metrics.getThreadId());
             if (metrics.getChildThreads() != null) {
                 metrics.getChildThreads().keySet()
@@ -212,6 +284,13 @@ public class ThreadMonitorService {
         }
     }
 
+    /**
+     * Registers a child thread with its parent thread for monitoring.
+     * Enables tracking of thread hierarchies in complex operations.
+     *
+     * @param parentThreadId ID of the parent thread
+     * @param childThread The child thread to register
+     */
     public void registerChildThread(long parentThreadId, Thread childThread) {
         String methodKey = threadToMethod.get(parentThreadId);
         if (methodKey != null) {

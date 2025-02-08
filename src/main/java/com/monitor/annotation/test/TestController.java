@@ -16,20 +16,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/test")
 public class TestController {
 
-    @PerformanceMeasure("간단한 API 테스트")
+    @PerformanceMeasure("Simple API test")
     @GetMapping("/simple")
     public String simpleTest() {
         return "Hello World";
     }
 
-    @PerformanceMeasure("시간이 걸리는 API 테스트")
+    @PerformanceMeasure("Slow API test")
     @GetMapping("/slow")
     public String slowTest() throws InterruptedException {
-        Thread.sleep(1000); // 1초 대기
+        Thread.sleep(1000);
         return "Slow Response";
     }
 
-    @PerformanceMeasure("메모리를 많이 사용하는 API 테스트")
+    @PerformanceMeasure("Heavy memory API test")
     @GetMapping("/memory")
     public String memoryTest() {
         StringBuilder sb = new StringBuilder();
@@ -39,7 +39,7 @@ public class TestController {
         return "Memory Test Complete";
     }
 
-    @PerformanceMeasure("Post테스트")
+    @PerformanceMeasure("Post test")
     @PostMapping("/post1")
     public TestDto post(@RequestBody TestDto testDto) {
         return testDto;

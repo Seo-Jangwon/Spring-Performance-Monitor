@@ -18,6 +18,14 @@ import java.lang.management.*;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Service for monitoring JVM memory metrics and garbage collection statistics.
+ * Collects detailed metrics about:
+ * - Heap memory usage (Young/Old generation)
+ * - Non-heap memory usage (Metaspace)
+ * - Garbage collection activities
+ * - Thread pool statistics
+ */
 @Slf4j
 @Service
 public class MemoryMonitorService {
@@ -29,6 +37,9 @@ public class MemoryMonitorService {
     private final ThreadPoolTaskExecutor performanceTestExecutor;
     private final ThreadMonitorService threadMonitorService;
 
+    /**
+     * Initializes the service with required MXBeans and executors for monitoring.
+     */
     public MemoryMonitorService(
         @Qualifier("performanceTestExecutor") ThreadPoolTaskExecutor performanceTestExecutor,
         ThreadMonitorService threadMonitorService
@@ -41,17 +52,23 @@ public class MemoryMonitorService {
         this.threadMonitorService = threadMonitorService;
     }
 
+    /**
+     * Collects comprehensive memory metrics including heap, non-heap, GC,
+     * and thread pool statistics.
+     *
+     * @return Current memory metrics snapshot
+     */
     public MemoryMetrics collectMetrics() {
         try {
-            // 기본 메모리 메트릭 수집
+            // collect base memory metrics
             MemoryMetrics baseMetrics = collectBaseMetrics();
 
-            // ThreadMetrics 수집 및 통합
+            // collect and integrate threadMetrics
             ThreadMetrics threadMetrics = threadMonitorService.getMethodMetrics(
                 "PerformanceTestService", "runTest"
             );
 
-            // 통합된 메트릭 반환
+            // return integrated metrics
             return baseMetrics.withThreadMetrics(threadMetrics);
 
         } catch (Exception e) {
@@ -60,19 +77,22 @@ public class MemoryMonitorService {
         }
     }
 
+    /**
+     * Collects base memory metrics including heap, non-heap usage, and GC statistics.
+     */
     private MemoryMetrics collectBaseMetrics() {
-        // 힙 메모리
+        // heap
         MemoryUsage heapUsage = memoryMXBean.getHeapMemoryUsage();
 
-        // 논힙 메모리
+        // non heap
         MemoryUsage nonHeapUsage = memoryMXBean.getNonHeapMemoryUsage();
 
-        // 메타스페이스
+        // Metaspace
         Optional<MemoryPoolMXBean> metaspace = memoryPoolMXBeans.stream()
             .filter(pool -> pool.getName().contains("Metaspace"))
             .findFirst();
 
-        // Young/Old Generation 메모리 사용량 수집
+        // collect Young/Old Generation memory usage
         long youngGenUsed = getMemoryPoolUsage("Eden Space")
             .map(MemoryUsage::getUsed)
             .orElse(0L);
@@ -81,11 +101,8 @@ public class MemoryMonitorService {
             .map(MemoryUsage::getUsed)
             .orElse(0L);
 
-        // GC 메트릭 수집
+        // collect GC metrics
         GCMetrics gcMetrics = collectGCMetrics();
-
-        // 스레드 상태
-        ThreadStates threadStates = collectThreadStates();
 
         return MemoryMetrics.builder()
             .timestamp(LocalDateTime.now())
@@ -142,41 +159,6 @@ public class MemoryMonitorService {
         }
 
         return new GCMetrics(youngGcCount, oldGcCount, youngGcTime, oldGcTime);
-    }
-
-    @Getter
-    @AllArgsConstructor
-    private static class ThreadStates {
-
-        private final int waiting;
-        private final int blocked;
-        private final int running;
-    }
-
-    private ThreadStates collectThreadStates() {
-        int waiting = 0;
-        int blocked = 0;
-        int running = 0;
-
-        ThreadInfo[] threadInfo = threadMXBean.getThreadInfo(threadMXBean.getAllThreadIds());
-        for (ThreadInfo info : threadInfo) {
-            if (info != null) {
-                switch (info.getThreadState()) {
-                    case WAITING:
-                    case TIMED_WAITING:
-                        waiting++;
-                        break;
-                    case BLOCKED:
-                        blocked++;
-                        break;
-                    case RUNNABLE:
-                        running++;
-                        break;
-                }
-            }
-        }
-
-        return new ThreadStates(waiting, blocked, running);
     }
 
     private Optional<MemoryUsage> getMemoryPoolUsage(String poolName) {

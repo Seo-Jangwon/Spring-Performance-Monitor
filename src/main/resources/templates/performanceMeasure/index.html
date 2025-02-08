@@ -1,0 +1,211 @@
+<!--
+  Copyright (c) 2025 Seo-Jangwon
+  Licensed under MIT License
+-->
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Performance Test Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/jsoneditor@9.5.5/dist/jsoneditor.min.css"
+        rel="stylesheet">
+  <link href="/performanceMeasure/css/styles.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.js"></script>
+</head>
+<body>
+<div class="container mt-4">
+  <h2>Performance Test Dashboard</h2>
+
+  <!-- 엔드포인트 선택 섹션 -->
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">Available Endpoints</h4>
+      <div class="btn-group">
+        <button class="btn btn-outline-secondary btn-sm" onclick="toggleView('list')">List View
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="toggleView('card')">Card View
+        </button>
+      </div>
+    </div>
+    <div class="card-body">
+      <!-- 검색 및 필터링 -->
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <input type="text" class="form-control" id="endpointSearch"
+                 placeholder="Search endpoints...">
+        </div>
+        <div class="col-md-3">
+          <select class="form-select" id="methodFilter">
+            <option value="">All Methods</option>
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 엔드포인트 목록 (카드 뷰) -->
+      <div id="endpointCardsView" class="row g-3">
+        <!-- 카드들은 JS로 동적 생성됨 -->
+      </div>
+
+      <!-- 엔드포인트 목록 (리스트 뷰) -->
+      <div id="endpointListView" class="d-none">
+        <table class="table table-hover">
+          <thead>
+          <tr>
+            <th>Method</th>
+            <th>URL</th>
+            <th>Controller</th>
+            <th>Services</th>
+            <th>Actions</th>
+          </tr>
+          </thead>
+          <tbody id="endpointListBody">
+          <!-- 리스트 항목들은 JS로 동적 생성됨 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 테스트 설정 섹션 -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h4 class="mb-0">Test Configuration</h4>
+    </div>
+    <div class="card-body">
+      <form id="testForm">
+        <!-- 선택된 엔드포인트 정보 -->
+        <div class="selected-endpoint-info mb-4">
+          <h5>Selected Endpoint</h5>
+          <div class="alert alert-info">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <strong id="selectedEndpointMethod">-</strong>
+                <span id="selectedEndpointUrl">No endpoint selected</span>
+              </div>
+              <span class="badge bg-secondary" id="endpoint-description">-</span>
+            </div>
+          </div>
+
+          <!-- Request Body -->
+          <div id="requestBodySection" class="mt-3">
+            <h6>Request Body</h6>
+            <div class="mb-2">
+              <small class="text-muted">Request Type: <span id="requestType">-</span></small>
+            </div>
+            <div id="jsonEditor" style="height: 200px;"></div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <input type="text" class="form-control" id="description" required>
+        </div>
+
+        <!-- Headers Section -->
+        <div class="mb-3">
+          <label class="form-label">Headers</label>
+          <div id="headersContainer">
+            <div class="header-row d-flex mb-2">
+              <input type="text" class="form-control me-2" placeholder="Key">
+              <input type="text" class="form-control me-2" placeholder="Value">
+              <button type="button" class="btn btn-secondary btn-sm add-header">+</button>
+              <button type="button" class="btn btn-danger btn-sm ms-2 remove-header">-</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Test Parameters -->
+        <div class="row">
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label class="form-label">Concurrent Users</label>
+              <input type="number" class="form-control" id="concurrentUsers" value="1" min="1">
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label class="form-label">Repeat Count</label>
+              <input type="number" class="form-control" id="repeatCount" value="1" min="1">
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label class="form-label">Ramp-up Seconds</label>
+              <input type="number" class="form-control" id="rampUpSeconds" value="0" min="0">
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="runTestBtn" disabled>Run Test</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 테스트 결과 목록 -->
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h4 class="mb-0">Test Results</h4>
+      <button class="btn btn-outline-secondary btn-sm" onclick="clearResults()">Clear Results
+      </button>
+    </div>
+    <div class="card-body">
+      <table class="table">
+        <thead>
+        <tr>
+          <th>Description</th>
+          <th>URL</th>
+          <th>Status</th>
+          <th>Avg Response Time</th>
+          <th>Max Response Time</th>
+          <th>Requests/sec</th>
+          <th>Error Rate</th>
+          <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody id="resultsBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<template id="endpointCardTemplate">
+  <div class="col-md-6 col-lg-4">
+    <div class="card endpoint-card" onclick="selectEndpoint(this)" data-endpoint-id="">
+      <div class="card-header">
+        <span class="badge method-badge"></span>
+        <small class="float-end text-muted"></small>
+      </div>
+      <div class="card-body">
+        <h6 class="card-title text-truncate"></h6>
+        <p class="card-text small"></p>
+        <div class="services-list">
+          <!-- Service items will be added here -->
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<div th:replace="~{performanceMeasure/test-details :: detailsModal}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsoneditor@9.5.5/dist/jsoneditor.min.js"></script>
+<script type="module">
+  import {mainManager} from '/performanceMeasure/js/main.js';
+  import {testDetailsManager} from '/performanceMeasure/js/test-details.js';
+
+  window.selectEndpoint = (element) => mainManager.selectEndpoint(element);
+  window.toggleView = (viewType) => mainManager.toggleView(viewType);
+  window.clearResults = () => mainManager.clearResults();
+  window.showDetails = (testId) => testDetailsManager.showDetails(testId);
+  window.showStackTrace = () => testDetailsManager.showStackTrace();
+</script>
+
+</body>
+</html>

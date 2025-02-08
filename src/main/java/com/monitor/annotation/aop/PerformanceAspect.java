@@ -17,6 +17,18 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
 
+/**
+ * Aspect class for measuring and monitoring method performance.
+ * This aspect intercepts methods annotated with @PerformanceMeasure and collects various metrics:
+ * - Execution time
+ * - Memory usage
+ * - Thread metrics
+ *
+ * The collected data is stored through PerformanceMonitorService for analysis.
+ *
+ * @author Seo-Jangwon
+ * @see com.monitor.annotation.annotation.PerformanceMeasure
+ */
 @Aspect
 @Component
 @RequiredArgsConstructor
@@ -25,6 +37,19 @@ public class PerformanceAspect {
     private final PerformanceMonitorService monitorService;
     private final ThreadMonitorService threadMonitorService;
 
+
+    /**
+     * Measures performance metrics for methods annotated with @PerformanceMeasure.
+     * Collects the following metrics:
+     * - Method execution time in milliseconds
+     * - Memory usage before and after method execution
+     * - Thread metrics during method execution
+     *
+     * @param joinPoint The join point representing the intercepted method
+     * @param performanceMeasure The annotation instance containing measurement configuration
+     * @return The result of the method execution
+     * @throws Throwable If any error occurs during method execution
+     */
     @Around("@annotation(performanceMeasure)")
     public Object measurePerformance(ProceedingJoinPoint joinPoint,
         PerformanceMeasure performanceMeasure) throws Throwable {
@@ -33,27 +58,28 @@ public class PerformanceAspect {
         String className = signature.getDeclaringType().getSimpleName();
         String methodName = signature.getName();
 
-        // 메서드 스레드 모니터링 시작
+        // Start monitoring the method thread
         ThreadMetrics threadMetrics = threadMonitorService.startMethodMonitoring(className, methodName);
 
-        // 시작 시간과 메모리 측정
+        // Measure start time and memory
         long startTime = System.nanoTime();
         long startMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 
         try {
-            // 실제 메서드 실행
+            // Start method
             return joinPoint.proceed();
         } finally {
-            // 종료 시간과 메모리 측정
+
+            // Measure end time and memory
             long executionTime = (System.nanoTime() - startTime) / 1_000_000;
             long endMemory = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
             long memoryUsed = (endMemory - startMemory) / 1024;
 
-            // 최종 스레드 메트릭 수집
+            // Collect final thread metrics
             threadMonitorService.updateMethodMetrics(className, methodName);
             ThreadMetrics finalMetrics = threadMonitorService.getMethodMetrics(className, methodName);
 
-            // 성능 데이터 저장
+            // Save performance data
             PerformanceData performanceData = PerformanceData.of(
                 className,
                 methodName,
@@ -65,7 +91,7 @@ public class PerformanceAspect {
 
             monitorService.addPerformanceData(performanceData);
 
-            // 모니터링 종료
+            // End monitoring
             threadMonitorService.stopMethodMonitoring(className, methodName);
         }
     }

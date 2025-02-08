@@ -11,10 +11,10 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.monitor.annotation.annotation.PerformanceMeasure;
 import com.monitor.annotation.dto.PerformanceEndpoint;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
-import java.util.stream.Collectors;
-import lombok.Data;
-import lombok.Getter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -32,7 +32,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Spring 애플리케이션에서 @PerformanceMeasure 어노테이션이 적용된 엔드포인트 및 관련 서비스 메서드 스캔
+ * Scanner for detecting and analyzing endpoints that can be performance tested.
+ * Scans Spring controllers for methods annotated with @PerformanceMeasure and
+ * collects detailed information about endpoints including request/response types,
+ * HTTP methods, and associated service methods.
  */
 @Slf4j
 @Component
@@ -42,14 +45,11 @@ public class PerformanceEndpointScanner {
     private final ApplicationContext applicationContext;
     private volatile Map<String, List<PerformanceEndpoint>> cachedEndpoints;
 
-    // 소스 파일 캐시 (반복적인 파일 시스템 접근 방지)
-    private final Map<String, String> sourceFileCache = new ConcurrentHashMap<>();
-
-
     /**
-     * 애플리케이션의 모든 엔드포인트와 연관된 서비스 메서드 스캔
+     * Main scanning method that finds all endpoints available for performance testing.
+     * Results are cached to improve performance on subsequent calls.
      *
-     * @return HTTP 메서드별로 그룹화된 엔드포인트 정보
+     * @return Map of HTTP methods to their corresponding endpoints
      */
     public Map<String, List<PerformanceEndpoint>> scanEndpoints() {
         if (cachedEndpoints == null) {
@@ -76,7 +76,7 @@ public class PerformanceEndpointScanner {
                 Class<?> controllerClass = controller.getClass();
                 String baseUrl = getControllerBaseUrl(controllerClass);
 
-                // AOP 프록시인 경우 실제 클래스 가져오기
+                // Get the actual class in case of AOP proxy
                 if (controllerClass.getSimpleName().contains("$$")) {
                     controllerClass = controllerClass.getSuperclass();
                 }
@@ -107,23 +107,23 @@ public class PerformanceEndpointScanner {
     }
 
     /**
-     * 컨트롤러의 기본 URL 추출
+     * Extracts the base URL of the controller
      */
     private String getControllerBaseUrl(Class<?> controllerClass) {
-        // Spring CGLIB 프록시인 경우 실제 클래스 가져옴
+        // Get the actual class in case of Spring CGLIB proxy
         if (controllerClass.getSimpleName().contains("$$")) {
             controllerClass = controllerClass.getSuperclass();
         }
 
         String baseUrl = "";
 
-        // RequestMapping 어노테이션 확인
+        // Check for RequestMapping annotation
         RequestMapping requestMapping = controllerClass.getAnnotation(RequestMapping.class);
         if (requestMapping != null && requestMapping.value().length > 0) {
             baseUrl = requestMapping.value()[0];
         }
 
-        // path 속성도 확인
+        // Check the path attribute
         if (baseUrl.isEmpty() && requestMapping != null && requestMapping.path().length > 0) {
             baseUrl = requestMapping.path()[0];
         }
@@ -133,12 +133,12 @@ public class PerformanceEndpointScanner {
     }
 
     /**
-     * 메서드의 URL 패턴 추출
+     * Extracts the URL pattern of the method
      */
     private String getMethodUrl(Method method, String baseUrl) {
         String methodUrl = "";
 
-        // HTTP 메서드 매핑 어노테이션들을 처리
+        // Process HTTP method mapping annotations
         if (method.isAnnotationPresent(RequestMapping.class)) {
             methodUrl = getUrlFromAnnotation(method.getAnnotation(RequestMapping.class).value());
         } else if (method.isAnnotationPresent(GetMapping.class)) {
@@ -153,20 +153,17 @@ public class PerformanceEndpointScanner {
             methodUrl = getUrlFromAnnotation(method.getAnnotation(PatchMapping.class).value());
         }
 
-        // URL 중복 슬래시 방지
+        // Prevent duplicate slashes in the URL
         String combinedUrl = "";
         if (baseUrl.endsWith("/") && methodUrl.startsWith("/")) {
-            // baseUrl이 /로 끝나고 methodUrl이 /로 시작하면 하나 제거
             combinedUrl = baseUrl + methodUrl.substring(1);
         } else if (!baseUrl.endsWith("/") && !methodUrl.startsWith("/") && !methodUrl.isEmpty()) {
-            // 둘 다 /가 없는 경우 /를 추가
             combinedUrl = baseUrl + "/" + methodUrl;
         } else {
-            // 그 외의 경우는 그대로 결합
             combinedUrl = baseUrl + methodUrl;
         }
 
-        // 시작이 /가 아닌 경우 추가
+        // Add leading slash if not present
         if (!combinedUrl.startsWith("/")) {
             combinedUrl = "/" + combinedUrl;
         }
@@ -175,7 +172,7 @@ public class PerformanceEndpointScanner {
     }
 
     /**
-     * 어노테이션 value 배열에서 URL 추출
+     * Extracts URL from annotation value array
      */
     private String getUrlFromAnnotation(String[] values) {
         if (values == null || values.length == 0) {
@@ -185,7 +182,7 @@ public class PerformanceEndpointScanner {
     }
 
     /**
-     * HTTP 메서드 타입 추출
+     * Extracts the HTTP method type
      */
     private String getHttpMethod(Method method) {
         if (method.isAnnotationPresent(GetMapping.class)) {
@@ -215,158 +212,50 @@ public class PerformanceEndpointScanner {
     }
 
     /**
-     * JavaParser를 사용하여 메서드 내의 모든 메서드 호출 찾기
-     */
-    private Set<String> findMethodCalls(Method method) {
-        Set<String> methodCalls = new HashSet<>();
-        try {
-            String sourceFile = findSourceFile(method.getDeclaringClass().getSimpleName());
-            if (sourceFile != null) {
-                CompilationUnit cu = StaticJavaParser.parse(new File(sourceFile));
-
-                cu.findAll(MethodDeclaration.class).stream()
-                    .filter(md -> md.getNameAsString().equals(method.getName()))
-                    .forEach(md -> {
-                        md.findAll(MethodCallExpr.class).forEach(call ->
-                            methodCalls.add(call.getNameAsString()));
-                    });
-            }
-        } catch (Exception e) {
-            log.warn("Could not parse source file for method: " + method.getName(), e);
-        }
-        return methodCalls;
-    }
-
-    /**
-     * 클래스의 소스 파일 찾기
-     */
-    private String findSourceFile(String className) {
-        return sourceFileCache.computeIfAbsent(className, this::locateSourceFile);
-    }
-
-    /**
-     * 실제 소스 파일 위치 찾기
-     */
-    private String locateSourceFile(String className) {
-        try {
-            // 클래스 로더에서 클래스 파일 위치 찾기
-            String classFile = className + ".class";
-            URL classUrl = getClass().getClassLoader().getResource(classFile);
-            if (classUrl == null) {
-                log.warn("Could not find class file for: {}", className);
-                return null;
-            }
-
-            // 클래스 파일 경로를 소스 파일 경로로 변환
-            String classPath = classUrl.getPath();
-            Path sourcePath = convertClassPathToSourcePath(classPath, className);
-
-            if (sourcePath != null && Files.exists(sourcePath)) {
-                return sourcePath.toString();
-            }
-
-            // 일반적인 소스 디렉토리들을 탐색
-            String[] commonSourceDirs = {
-                "src/main/java",
-                "src/test/java"
-            };
-
-            String relativeSourcePath = className.replace('.', '/') + ".java";
-            for (String sourceDir : commonSourceDirs) {
-                Path possiblePath = Paths.get(sourceDir, relativeSourcePath);
-                if (Files.exists(possiblePath)) {
-                    return possiblePath.toString();
-                }
-            }
-
-            log.warn("Could not find source file for class: {}", className);
-            return null;
-
-        } catch (Exception e) {
-            log.error("Error finding source file for class: " + className, e);
-            return null;
-        }
-    }
-
-    /**
-     * 클래스 파일 경로를 소스 파일 경로로 변환
-     */
-    private Path convertClassPathToSourcePath(String classPath, String className) {
-        try {
-            Path path = Paths.get(classPath);
-            String sourceRoot = findSourceRoot(path);
-
-            if (sourceRoot != null) {
-                return Paths.get(sourceRoot, className.replace('.', '/') + ".java");
-            }
-        } catch (Exception e) {
-            log.warn("Error converting class path to source path", e);
-        }
-
-        return null;
-    }
-
-    /**
-     * 프로젝트의 소스 루트 디렉토리 찾기
-     */
-    private String findSourceRoot(Path classPath) {
-        try {
-            Path current = classPath;
-            while (current != null) {
-                if (Files.exists(current.resolve("src/main/java"))) {
-                    return current.resolve("src/main/java").toString();
-                }
-                if (Files.exists(current.resolve("build.gradle")) ||
-                    Files.exists(current.resolve("pom.xml"))) {
-                    return current.resolve("src/main/java").toString();
-                }
-                current = current.getParent();
-            }
-        } catch (Exception e) {
-            log.warn("Error finding source root", e);
-        }
-        return null;
-    }
-
-    /**
-     * 엔드포인트 정보 생성
+     * Creates endpoint information including request examples and parameter details.
+     * Analyzes controller methods to extract:
+     * - URL patterns
+     * - HTTP methods
+     * - Request/Response types
+     * - Request body examples
      */
     private PerformanceEndpoint createEndpoint(Class<?> controllerClass, Method method,
         String url, String httpMethod) {
 
-        // @PerformanceMeasure 어노테이션에서 설명 가져오기
         String description = Optional.ofNullable(method.getAnnotation(PerformanceMeasure.class))
             .map(PerformanceMeasure::value)
             .orElse("");
 
-        // 요청 바디 타입 분석
-        Class<?> requestBodyType;
-        Optional<Parameter> bodyParam = Arrays.stream(method.getParameters())
-            .filter(param -> param.isAnnotationPresent(RequestBody.class))
-            .findFirst();
-
-        if (bodyParam.isPresent()) {
-            requestBodyType = bodyParam.get().getType();
-        } else {
+        // Analyze request body type
+        Class<?> requestBodyType = null;
+        for (Parameter param : method.getParameters()) {
+            if (param.isAnnotationPresent(RequestBody.class)) {
+                requestBodyType = param.getType();
+                log.debug("Found @RequestBody parameter of type: {}", requestBodyType.getName());
+                break;
+            }
+        }
+        if (requestBodyType == null) {
             requestBodyType = Void.class;
+            log.debug("No @RequestBody parameter found, using Void.class");
         }
 
-        // 요청 예시 생성
-        Map<String, String> requestExample = new HashMap<>();
-        if (requestBodyType != void.class) {
-            requestExample = generateRequestExample(requestBodyType);
+        // Generate request example
+        Map<String, Object> requestExample = new HashMap<>();
+        if (requestBodyType != Void.class) {
+            log.debug("Generating request example for type: {}", requestBodyType.getName());
+            try {
+                requestExample = generateRequestExample(requestBodyType);
+                log.debug("Generated request example: {}", requestExample);
+            } catch (Exception e) {
+                log.error("Failed to generate request example for {}: {}",
+                    requestBodyType.getName(),
+                    e.getMessage(),
+                    e);
+            }
         }
 
-        // URL 파라미터 분석
-        Map<String, String> parameters = Arrays.stream(method.getParameters())
-            .filter(param -> param.isAnnotationPresent(RequestParam.class) ||
-                param.isAnnotationPresent(PathVariable.class))
-            .collect(Collectors.toMap(
-                Parameter::getName,
-                param -> param.getType().getSimpleName()
-            ));
-
-        return PerformanceEndpoint.builder()
+        PerformanceEndpoint endpoint = PerformanceEndpoint.builder()
             .endpointUrl(url)
             .httpMethod(httpMethod)
             .controllerClassName(controllerClass.getSimpleName())
@@ -374,60 +263,201 @@ public class PerformanceEndpointScanner {
             .requestType(requestBodyType.getSimpleName())
             .responseType(method.getReturnType().getSimpleName())
             .description(description)
-            .parameters(parameters)
+            .parameters(new HashMap<>())
             .requestExample(requestExample)
             .annotatedServices(new ArrayList<>())
             .build();
-    }
 
-    private Map<String, String> generateRequestExample(Class<?> type) {
-        Map<String, String> example = new LinkedHashMap<>();  // 순서 유지를 위해 LinkedHashMap 사용
-
-        // DTO 클래스인 경우 필드별 예시 값 생성
-        if (type.getAnnotation(Data.class) != null ||
-            type.getAnnotation(Getter.class) != null) {  // Lombok 어노테이션 체크
-
-            example.put("// Description", "\"" + type.getSimpleName() + " Request Body Format\"");
-
-            // 필드별 예시 값 생성
-            for (Field field : type.getDeclaredFields()) {
-                String fieldType = field.getType().getSimpleName();
-                String exampleValue = switch (fieldType.toLowerCase()) {
-                    case "string" -> "example";
-                    case "int", "integer" -> "0";
-                    case "long" -> "0";
-                    case "boolean" -> "false";
-                    case "double", "float" -> "0.0";
-                    case "localdate" -> "\"2024-01-02\"";
-                    case "localdatetime" -> "\"2024-01-02T09:00:00\"";
-                    case "list" -> "[]";
-                    case "map" -> "{}";
-                    default -> "null";
-                };
-                example.put(field.getName(), exampleValue);
-            }
-
-            // 필드 타입 정보 주석
-            example.put("// Field Types", "{" +
-                Arrays.stream(type.getDeclaredFields())
-                    .map(
-                        field -> "\"" + field.getName() + "\": \"" + field.getType().getSimpleName()
-                            + "\"")
-                    .collect(Collectors.joining(", ")) +
-                "}");
-        }
-
-        return example;
+        log.debug("Created endpoint: {}", endpoint);
+        return endpoint;
     }
 
     /**
-     * 요청 타입 추출 (@RequestBody 파라미터 타입)
+     * Generates example request body based on the class structure.
+     * Handles various types including:
+     * - Primitive types
+     * - Date/Time types
+     * - Collections
+     * - Nested objects
+     *
+     * @param type The class type to generate example for
+     * @return Map containing field names and example values
      */
-    private String getRequestType(Method method) {
-        return Arrays.stream(method.getParameters())
-            .filter(param -> param.isAnnotationPresent(RequestBody.class))
-            .findFirst()
-            .map(param -> param.getType().getSimpleName())
-            .orElse("void");
+    private Map<String, Object> generateRequestExample(Class<?> type) {
+        Map<String, Object> example = new LinkedHashMap<>();
+
+        Field[] fields = type.getDeclaredFields();
+        log.debug("Found {} fields in class", fields.length);
+
+        for (Field field : type.getDeclaredFields()) {
+
+            if (isAccessible(field)) {
+                String fieldType = field.getType().getSimpleName();
+                String fieldName = field.getName();
+                Type genericType = field.getGenericType();
+
+                Object exampleValue = switch (fieldType.toLowerCase()) {
+                    // num type
+                    case "byte" -> 1;
+                    case "short" -> 100;
+                    case "int", "integer" -> 42;
+                    case "long" -> 1000L;
+                    case "float" -> 3.14f;
+                    case "double" -> 3.14;
+                    case "bigdecimal" -> 123.456;
+                    case "biginteger" -> 10000;
+
+                    // str or char type
+                    case "string" -> "string";
+                    case "char", "character" -> "A";
+
+                    // boolean
+                    case "boolean", "Boolean" -> false;
+
+                    // date/time
+                    case "date" -> "2024-01-02T09:00:00.000Z";
+                    case "localdate" -> "2024-01-02";
+                    case "localtime" -> "09:00:30";
+                    case "localdatetime" -> "2024-01-02T09:00:30";
+                    case "instant" -> "2024-01-02T09:00:30.000Z";
+                    case "zoneddatetime" -> "2024-01-02T09:00:30+09:00[Asia/Seoul]";
+                    case "offsetdatetime" -> "2024-01-02T09:00:30+09:00";
+                    case "offsettime" -> "09:00:30+09:00";
+                    case "year" -> 2025;
+                    case "yearmonth" -> "2024-01";
+                    case "monthday" -> "--01-02";
+                    case "duration" -> "PT1H30M";
+                    case "period" -> "P1Y2M3D";
+
+                    // Enum
+                    case "enum" -> {
+                        if (field.getType().isEnum()) {
+                            Object[] enumConstants = field.getType().getEnumConstants();
+                            yield enumConstants.length > 0 ? enumConstants[0].toString() : null;
+                        }
+                        yield null;
+                    }
+
+                    // collections
+                    case "list", "arraylist", "linkedlist" -> new ArrayList<>();
+                    case "set", "hashset", "treeset" -> new HashSet<>();
+                    case "map", "hashmap", "treemap", "linkedhashmap" -> new HashMap<>();
+                    case "queue", "deque" -> new ArrayDeque<>();
+
+                    // arr
+                    case "array" -> field.getType().isArray() ? new ArrayList<>() : null;
+
+                    // UUID
+                    case "uuid" -> "123e4567-e89b-12d3-a456-426614174000";
+
+                    // Optional
+                    case "optional" -> null;
+
+                    // other
+                    case "uri" -> "http://example.com";
+                    case "url" -> "http://example.com";
+                    case "file" -> "/path/to/file";
+                    case "path" -> "/path/to/resource";
+                    case "locale" -> "en-US";
+                    case "timezone" -> "Asia/Seoul";
+                    case "currency" -> "USD";
+
+                    // collections
+                    case "int[]", "integer[]", "long[]", "double[]", "string[]", "boolean[]" ->
+                        createExampleArray(fieldType.toLowerCase());
+
+                    default -> {
+                        log.debug("Using default null for type: {}", fieldType);
+                        yield null;
+                    }
+                };// end object
+
+                if (genericType instanceof ParameterizedType) {
+                    ParameterizedType paramType = (ParameterizedType) genericType;
+                    Type[] typeArguments = paramType.getActualTypeArguments();
+
+                    if (fieldType.toLowerCase().contains("list") ||
+                        fieldType.toLowerCase().contains("set")) {
+                        if (typeArguments.length > 0) {
+                            List<Object> list = new ArrayList<>();
+                            if (typeArguments[0].equals(String.class)) {
+                                list.add("example string");
+                            } else if (typeArguments[0].equals(Integer.class)) {
+                                list.add(42);
+                            } else if (typeArguments[0].equals(Long.class)) {
+                                list.add(1000L);
+                            }
+                            example.put(fieldName, list);
+                        } else {
+                            example.put(fieldName, new ArrayList<>());
+                        }
+                    } else if (fieldType.toLowerCase().contains("map")) {
+                        if (typeArguments.length > 1) {
+                            Map<Object, Object> map = new HashMap<>();
+                            Object key = typeArguments[0].equals(String.class) ? "key" : 1;
+                            Object value = typeArguments[1].equals(String.class) ? "value" : 42;
+                            map.put(key, value);
+                            example.put(fieldName, map);
+                        } else {
+                            example.put(fieldName, new HashMap<>());
+                        }
+                    }
+                } else {
+                    example.put(fieldName, exampleValue);
+                }
+            } else {
+                log.debug("Skipping field {} as it's not accessible", field.getName());
+            }
+        }
+
+        log.debug("Final example map: {}", example);
+        return example;
     }
+
+    // Check if it can be made as a field
+    private boolean isAccessible(Field field) {
+        // if public
+        if (Modifier.isPublic(field.getModifiers())) {
+            return true;
+        }
+
+        String fieldName = field.getName();
+        String getterName =
+            "get" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+        String isGetterName =
+            "is" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+
+        try {
+            // if getter exists
+            return field.getDeclaringClass().getMethod(getterName) != null ||
+                (field.getType() == boolean.class &&
+                    field.getDeclaringClass().getMethod(isGetterName) != null);
+        } catch (NoSuchMethodException e) {
+            // check Lombok
+            return Arrays.stream(field.getDeclaringClass().getAnnotations())
+                .anyMatch(a -> {
+                    String name = a.annotationType().getSimpleName();
+                    return name.equals("Getter") || name.equals("Data");
+                });
+        }
+    }
+
+    private List<Object> createExampleArray(String type) {
+        switch (type) {
+            case "int[]":
+            case "integer[]":
+                return Arrays.asList(1, 2, 3);
+            case "long[]":
+                return Arrays.asList(1L, 2L, 3L);
+            case "double[]":
+                return Arrays.asList(1.0, 2.0, 3.0);
+            case "string[]":
+                return Arrays.asList("a", "b", "c");
+            case "boolean[]":
+                return Arrays.asList(true, false);
+            default:
+                return new ArrayList<>();
+        }
+    }
+
 }
