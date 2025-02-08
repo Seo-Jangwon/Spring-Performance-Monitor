@@ -7,10 +7,9 @@ A Spring Boot performance testing and monitoring tool that can be easily used wi
   <img src="img_2.png" alt="Image 2" width="200" />
 </p>
 
----
+</br>
 
 ## Features
-
 ### 1. Real-time Performance Monitoring
 - Memory Usage Tracking (Heap, Non-Heap)
 - Thread Pool Metrics (Active, Pool Size, Queue Size)
@@ -34,7 +33,7 @@ A Spring Boot performance testing and monitoring tool that can be easily used wi
 - Response Time Statistics
 - Error Rate Tracking
 
----
+</br>
 
 ## Tech Stack
 - Spring Boot 3.4.2
@@ -44,10 +43,9 @@ A Spring Boot performance testing and monitoring tool that can be easily used wi
 - Bootstrap 5 for UI
 - JavaParser for method analysis
 
----
+</br>
 
 ## Implementation Details
-
 ### 1. Core Components
 1. **PerformanceAspect**
    - AOP-based performance measurement
@@ -84,10 +82,9 @@ A Spring Boot performance testing and monitoring tool that can be easily used wi
    - Request/Response type analysis
    - Service method relationship mapping
 
----
+</br>
 
 ## Usage
-
 ### 1. Add `@PerformanceMeasure` to target methods
    ```java
    @PerformanceMeasure("API Response Time Test")
@@ -99,7 +96,7 @@ A Spring Boot performance testing and monitoring tool that can be easily used wi
 
 ### 2. Access the dashboard at `http://localhost:8080/performanceMeasure`
 
----
+</br>
 
 ## Roadmap
 - [ ] Fix Bugs
@@ -112,7 +109,7 @@ A Spring Boot performance testing and monitoring tool that can be easily used wi
    - Environment-specific profiles
    - Dynamic thread pool adjustment
 
----
+</br>
 
 ## API Documentation
 ### 1. Performance Monitoring Endpoints
@@ -124,7 +121,7 @@ A Spring Boot performance testing and monitoring tool that can be easily used wi
 ### 2. WebSocket Endpoints
 * `/ws/metrics` - Real-time metrics streaming
 
----
+</br>
 
 ## Contributing
 1. Fork the Project
@@ -133,10 +130,9 @@ A Spring Boot performance testing and monitoring tool that can be easily used wi
 4. Push to the Branch
 5. Open a Pull Request
 
----
+</br>
 
 ## Branch Rules
-
 ### 1. This project follows the Git Flow branching model
 
 - `develop` (default): Main development branch
@@ -170,11 +166,11 @@ test: Add tests
 chore: Update build tasks
 ```
 
----
+</br>
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](https://github.com/Seo-Jangwon/Simple-Spring-Performance-Measuring-Annotation/blob/develop/License) file for details.
 
----
+</br>
 
 For more detailed information or questions, please open an issue.
