@@ -1,5 +1,8 @@
-# SSPMA (Simple-Spring-Performance-Measuring-Annotation)
+# Mole1
 
+Please recommend a good name if you have one.
+</br>
+</br>
 A Spring Boot performance testing and monitoring tool that can be easily used with a single annotation. It provides real-time monitoring through WebSocket communication, memory tracking, and detailed thread analysis.
 
 <p>
