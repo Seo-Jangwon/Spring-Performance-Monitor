@@ -1,89 +1,179 @@
-# Spring Performance Monitor
+# Mole1
 
-간단하게 성능 테스트와 모니터링을 위한 Spring Boot 기반의 도구입니다. API 엔드포인트의 부하 테스트를 수행하고, 메서드 수준의 성능을 모니터링할 수 있습니다.
+Please recommend a good name if you have one.
 </br>
-A Spring Boot-based tool for simple performance testing and monitoring. It enables load testing of API endpoints and method-level performance monitoring.
+</br>
+A Spring Boot performance testing and monitoring tool that can be easily used with a single annotation. It provides real-time monitoring through WebSocket communication, memory tracking, and detailed thread analysis.
 
-![alt text](<성능측정 어노테이션.png>)
-![alt text](<성능 측정 어노테이션 디테일.png>)
+<p>
+  <img src="img.png" alt="Image 1" width="300" />
+  <img src="img_2.png" alt="Image 2" width="200" />
+</p>
 
-## Key Features
+</br>
 
-### 1. 부하 테스트 (Performance Testing)
-- 웹 기반 대시보드를 통한 테스트 시나리오 생성 및 실행 (Create and execute test scenarios through a web-based dashboard)
-- 동시 사용자 수, 반복 횟수, Ramp-up 시간 설정 가능 (Configure concurrent users, repeat count, and ramp-up time)
-- HTTP 메서드(GET, POST, PUT, DELETE) 지원 (Support for HTTP methods (GET, POST, PUT, DELETE))
-- 커스텀 헤더와 요청 본문 설정 가능 (Custom headers and request body configuration)
-- 실시간 테스트 진행 상황 모니터링 (Real-time test progress monitoring)
+## Features
+### 1. Real-time Performance Monitoring
+- Memory Usage Tracking (Heap, Non-Heap)
+- Thread Pool Metrics (Active, Pool Size, Queue Size)
+- GC Activity Monitoring (Young/Old Generation)
+- Method-level Performance Analysis
 
-#### 테스트 결과 메트릭 (Test Result Metrics)
-- 평균/최대 응응답 시간 (Average/Maximum response times)
-- 초당 요청 수 (Requests Per Second)
-- 에러율 (Error rate)
+### 2. Load Testing Capabilities
+- Concurrent User Simulation
+- Configurable Test Parameters
+   - Concurrent Users Count
+   - Request Repeat Count
+   - Ramp-up Period
+- Customizable HTTP Headers
+- Support for HTTP Methods (GET, POST, PUT, DELETE)
+- JSON Request Body Support
 
-### 2. 메서드 성능 모니터링 (Method Performance Monitoring)
-- 어노테이션 기반의 간편한 메서드 성능 측정 (Easy method performance measurement using annotations)
-- 실행 시간 추적 (Execution time tracking)
+### 3. Detailed Analytics
+- Thread State Analysis (Running, Waiting, Blocked)
+- CPU Time & User Time Measurements
+- Stack Trace Monitoring
+- Response Time Statistics
+- Error Rate Tracking
 
-## 작동 원리 (How It Works)
+</br>
 
-### 부하 테스트 엔진 (Load Test Engine)
-#### 핵심 컴포넌트 (Core Components)
-1. RestTemplate: HTTP 요청 실행 (Executes HTTP requests)
-2. ConcurrentHashMap: 테스트 결과 저장 (Stores test results)
-3. ExecutorService: 동시 사용자 시뮬레이션 (Simulates concurrent users)
+## Tech Stack
+- Spring Boot 3.4.2
+- Java 17
+- WebSocket for real-time communication
+- Chart.js for metrics visualization
+- Bootstrap 5 for UI
+- JavaParser for method analysis
 
-#### 테스트 실행 프로세스 (Test Execution Process)
-1. 테스트 시나리오 접수 (Test scenario reception)
-2. 각 가상 사용자별 스레드 생성 (Thread creation for each virtual user)
-3. CountDownLatch로 동시성 제어 (Concurrency control using CountDownLatch)
-4. 응답 시간 측정 및 결과 수집 (Response time measurement and result collection)
-5. 실시간 상태 업데이트 (Real-time status updates)
+</br>
 
-## 사용 방법 (Usage)
+## Implementation Details
+### 1. Core Components
+1. **PerformanceAspect**
+   - AOP-based performance measurement
+   - Method execution time tracking
+   - Thread state monitoring
 
-### 1. 부하 테스트 실행하기 (Running Load Tests)
-1. 애플리케이션 실행 (Start the application) - http://localhost:8080
-2. 테스트 시나리오 입력 (Input test scenario)
-   - Description: 테스트 설명 (Test description)
-   - URL: 테스트할 엔드포인트 (Target endpoint)
-   - 동시 사용자 수와 반복 횟수 설정 (Set concurrent users and repeat count)
-3. Run Test 클릭 (Click Run Test)
-4. 실시간 결과 확인 (Monitor real-time results)
+2. **ThreadMonitorService**
+   - Thread pool management
+   - CPU/User time measurement
+   - Thread state tracking
 
-### 2. 메서드 모니터링 추가하기 (Adding Method Monitoring)
-1. 대상 메서드에 @PerformanceMeasure 추가 (Add @PerformanceMeasure to target method)
-2. 어노테이션에 설명 입력 (Input description in annotation)
+3. **MemoryMonitorService**
+   - Heap/Non-heap memory monitoring
+   - GC metrics collection
+   - Memory usage analysis
 
-## 개선 포인트 (Improvement Points)
+4. **WebSocket Handler**
+   - Real-time metrics transmission
+   - Bi-directional communication
+   - Session management
 
-### 1. 부하 테스트 엔진 (Load Test Engine)
-- Connection Pool 최적화 (Connection Pool optimization)
-- 가변 부하 패턴 지원 (Variable load pattern support)
-- 테스트 시나리오 재사용 (Test scenario reuse)
-- 분산 테스트 지원 (Distributed testing support)
+### 2. Key Features Implementation
+1. **@PerformanceMeasure Annotation**
+   ```java
+   @Target(ElementType.METHOD)
+   @Retention(RetentionPolicy.RUNTIME)
+   public @interface PerformanceMeasure {
+       String value() default "";
+   }
+   ```
 
-### 2. 모니터링 (Monitoring)
-- 메모리 누수 탐지 (Memory leak detection)
-- 상세 스레드 분석 (Detailed thread analysis)
-- 커스텀 메트릭 추가 (Custom metrics addition)
-- 메모리 모니터링 대시보드 (Memory Monitoring Dashboard)
-- 병목 지점 시각화 (Visualize bottlenecks)
+2. **Endpoint Scanner**
+   - Automatic API endpoint detection
+   - Request/Response type analysis
+   - Service method relationship mapping
 
-### 3. UI/UX
-- 실시간 그래프 (Real-time graphs)
-- 테스트 비교 기능 (Test comparison)
-- 결과 내보내기 (Result export)
-- 대시보드 커스터마이징 (Dashboard customization)
+</br>
+
+## Usage
+### 1. Add `@PerformanceMeasure` to target methods
+   ```java
+   @PerformanceMeasure("API Response Time Test")
+   @GetMapping("/api/test")
+   public ResponseEntity<?> testEndpoint() {
+       // Method implementation
+   }
+   ```
+
+### 2. Access the dashboard at `http://localhost:8080/performanceMeasure`
+
+</br>
+
+## Roadmap
+- [ ] Fix Bugs
+- [ ] Distributed Load Testing Support
+- [ ] Custom Metric Implementation
+- [ ] Test Scenario Export/Import
+- [ ] Performance Report Generation
+- [ ] Configurable Thread Pool Settings
+   - External configuration support (YAML/Properties)
+   - Environment-specific profiles
+   - Dynamic thread pool adjustment
+
+</br>
+
+## API Documentation
+### 1. Performance Monitoring Endpoints
+* `GET /performanceMeasure` - Main dashboard
+* `GET /performanceMeasure/endpoints` - List available endpoints
+* `POST /performanceMeasure/run` - Execute performance test
+* `GET /performanceMeasure/status/{testId}` - Get test status
+* `GET /performanceMeasure/results` - Get test results
+### 2. WebSocket Endpoints
+* `/ws/metrics` - Real-time metrics streaming
+
+</br>
 
 ## Contributing
-
 1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
+2. Create your Feature Branch
+3. Commit your Changes
+4. Push to the Branch
 5. Open a Pull Request
 
-## License
+</br>
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
+## Branch Rules
+### 1. This project follows the Git Flow branching model
+
+- `develop` (default): Main development branch
+- `main`: Production-ready state
+- `feature/*`: New features
+- `bugfix/*`: Bug fixes
+- `hotfix/*`: Emergency fixes for production
+- `release/*`: Release preparation
+
+### 2. Branch Naming Convention
+- feature: `feature/add-memory-monitoring`
+- bugfix: `bugfix/fix-thread-metrics`
+- hotfix: `hotfix/critical-memory-leak`
+- release: `release/v1.0.0`
+
+### 3. Protection Rules
+- `develop` and `main`
+    - Require pull request reviews
+    - No direct pushes
+    - Must be up to date before merging
+    - Status checks must pass
+
+### 4. Commit Convention
+```
+feat: Add new feature
+fix: Fix bug
+docs: Update documentation
+style: Format code
+refactor: Refactor code
+test: Add tests
+chore: Update build tasks
+```
+
+</br>
+
+## License
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/Seo-Jangwon/Simple-Spring-Performance-Measuring-Annotation/blob/develop/License) file for details.
+
+</br>
+
+For more detailed information or questions, please open an issue.
