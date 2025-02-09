@@ -25,6 +25,14 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+/**
+ * WebSocket handler for streaming real-time performance metrics to clients.
+ * Manages WebSocket connections and periodically sends metrics updates including:
+ * - Memory usage metrics (heap, non-heap)
+ * - Thread pool statistics
+ * - Test execution progress
+ * - Performance metrics
+ */
 @Slf4j
 @Component
 public class MetricsWebSocketHandler extends TextWebSocketHandler {
@@ -35,6 +43,10 @@ public class MetricsWebSocketHandler extends TextWebSocketHandler {
     private final PerformanceTestService testService;
     private final ThreadMonitorService threadMonitorService;
 
+    /**
+     * Initializes the handler with required services and configures ObjectMapper with proper
+     * datetime serialization settings.
+     */
     public MetricsWebSocketHandler(
         MemoryMonitorService memoryMonitorService,
         PerformanceTestService testService,
@@ -48,11 +60,19 @@ public class MetricsWebSocketHandler extends TextWebSocketHandler {
             .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
     }
 
+    /**
+     * Handles WebSocket connection establishment.
+     * Logs new connection information for debugging purposes.
+     */
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         log.info("WebSocket connection established: {}", session.getId());
     }
 
+    /**
+     * Processes incoming messages from clients.
+     * Expects test ID as the message payload and associates it with the session.
+     */
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         try {
@@ -64,6 +84,15 @@ public class MetricsWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
+    /**
+     * Scheduled task that sends metric updates to all connected clients.
+     * Runs every second to collect and send
+     * - Current test status
+     * - Memory metrics
+     * - Thread metrics
+     *
+     * Automatically closes the session when the test is completed.
+     */
     @Scheduled(fixedRate = 1000)
     public void sendMetrics() {
         sessionTestMap.forEach((session, testId) -> {
@@ -75,7 +104,7 @@ public class MetricsWebSocketHandler extends TextWebSocketHandler {
 
                 TestResult testResult = testService.getTestStatus(testId);
                 if (testResult != null) {
-                    // 통합된 메트릭 수집
+                    // Integrated metric collection
                     WebSocketMessage message = createWebSocketMessage(testResult);
 
                     String payload = objectMapper.writeValueAsString(message);
@@ -100,12 +129,22 @@ public class MetricsWebSocketHandler extends TextWebSocketHandler {
         });
     }
 
+    /**
+     * Creates a comprehensive message containing all metrics for a test.
+     * Includes:
+     * - Current test status and results
+     * - Memory usage metrics
+     * - Thread pool statistics
+     *
+     * @param testResult Current test result data
+     * @return WebSocketMessage containing all metrics
+     */
     private WebSocketMessage createWebSocketMessage(TestResult testResult) {
-        // 메모리 메트릭 수집
+        // Memory metric collection
         MemoryMetrics metrics = memoryMonitorService.collectMetrics();
         testResult.addMemoryMetric(metrics);
 
-        // 스레드 메트릭 업데이트
+        // Thread metric update
         ThreadMetrics threadMetrics = null;
         if (!testResult.isCompleted()) {
             threadMetrics = threadMonitorService.getMethodMetrics(
@@ -118,6 +157,10 @@ public class MetricsWebSocketHandler extends TextWebSocketHandler {
         return new WebSocketMessage(testResult, threadMetrics, metrics);
     }
 
+    /**
+     * Data transfer object for WebSocket messages.
+     * Contains all metrics data to be sent to clients.
+     */
     @Getter
     @AllArgsConstructor
     private static class WebSocketMessage {

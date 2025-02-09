@@ -15,6 +15,10 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
+/**
+ * WebSocket configuration class for real-time metrics monitoring. Sets up WebSocket endpoints and
+ * handlers for streaming performance metrics and monitoring data to clients.
+ */
 @Configuration
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
@@ -30,14 +34,22 @@ public class WebSocketConfig implements WebSocketConfigurer {
         this.threadMonitorService = threadMonitorService;
     }
 
+    /**
+     * Registers WebSocket handler for metrics endpoint. Configures CORS to allow all origins for
+     * testing purposes.
+     */
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(metricsWebSocketHandler(), "/ws/metrics")
             .setAllowedOrigins("*");
     }
 
+    /**
+     * Creates WebSocket handler bean for handling metrics data streaming.
+     */
     @Bean
     public MetricsWebSocketHandler metricsWebSocketHandler() {
-        return new MetricsWebSocketHandler(memoryMonitorService, performanceTestService, threadMonitorService);
+        return new MetricsWebSocketHandler(memoryMonitorService, performanceTestService,
+            threadMonitorService);
     }
 }

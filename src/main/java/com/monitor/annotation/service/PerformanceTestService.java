@@ -33,24 +33,34 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * Core service for executing performance tests against REST endpoints.
+ * Provides functionality for:
+ * - Concurrent load testing
+ * - Real-time metrics collection
+ * - Test progress monitoring
+ * - Result aggregation and analysis
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PerformanceTestService {
 
+    private final Object testLock = new Object();
+    private volatile boolean testInProgress = false;
     private final RestTemplate restTemplate;
-    private final MemoryMonitorService memoryMonitorService;    // 메모리 모니터링
-    private final ThreadMonitorService threadMonitorService;    // 스레드 모니터링
+    private final MemoryMonitorService memoryMonitorService;
+    private final ThreadMonitorService threadMonitorService;
 
     @Qualifier("performanceTestExecutor")
     private final ThreadPoolTaskExecutor performanceTestExecutor;
 
-    // 테스트 결과 및 메트릭 저장소
-    private final Map<String, TestResult> testResults = new ConcurrentHashMap<>();           // 테스트 결과 저장
-    private final Map<String, List<MemoryMetrics>> activeTestMetrics = new ConcurrentHashMap<>();  // 활성 테스트의 메모리 메트릭
+    private final Map<String, TestResult> testResults = new ConcurrentHashMap<>();           // save test results
+    private final Map<String, List<MemoryMetrics>> activeTestMetrics = new ConcurrentHashMap<>();  // memory metrics of active test
 
     /**
-     * 활성화된 테스트들 메모리 메트릭 주기적으로 수집. 1초마다 실행. 현재 실행 중인 모든 테스트에 대한 메모리 메트릭 수집
+     * Collect memory metrics of active tests periodically. Execute every 1 second. Collect memory
+     * metrics for all currently running tests.
      */
     @Scheduled(fixedRate = 1000)
     public void collectMetricsForActiveTests() {
@@ -61,72 +71,93 @@ public class PerformanceTestService {
     }
 
     /**
-     * 새로운 테스트에 대한 메트릭 수집 시작
+     * start collecting metrics for new tests
      *
-     * @param testId 테스트 ID
+     * @param testId test ID
      */
     private void startMetricsCollection(String testId) {
         activeTestMetrics.put(testId, Collections.synchronizedList(new ArrayList<>()));
     }
 
     /**
-     * 테스트 메트릭 수집 중단 및 수집된 메트릭 반환
+     * stop collecting test metrics and return collected metrics
      *
-     * @param testId 테스트 ID
-     * @return 수집된 메모리 메트릭 리스트
+     * @param testId test ID
+     * @return collected memory metrics list
      */
     private List<MemoryMetrics> stopMetricsCollection(String testId) {
         return activeTestMetrics.remove(testId);
     }
 
     /**
-     * 새로운 성능 테스트를 시작
+     * Initiates a new performance test based on the provided configuration.
+     * Ensures only one test runs at a time and manages test lifecycle.
      *
-     * @param request 테스트 시나리오 요청 정보
-     * @return 생성된 테스트 ID
+     * @param request Test configuration including endpoint, concurrency, and other parameters
+     * @return Unique test ID for tracking the test
+     * @throws IllegalStateException if another test is already running
      */
     public String startNewTest(TestScenarioRequest request) {
-        String testId = UUID.randomUUID().toString();
-        startMetricsCollection(testId);
+        synchronized (testLock) {
+            if (testInProgress) {
+                throw new IllegalStateException(
+                    "Another test is already in progress. Please wait for it to complete.");
+            }
+            testInProgress = true;
+        }
+        try {
+            String testId = UUID.randomUUID().toString();
+            startMetricsCollection(testId);
 
-        log.info("Starting new test with ID: {}", testId);
+            log.info("Starting new test with ID: {}", testId);
 
-        TestResult initialResult = TestResult.builder()
-            .testId(testId)
-            .description(request.getDescription())
-            .url(request.getUrl())
-            .method(request.getMethod())
-            .className(this.getClass().getSimpleName())
-            .methodName("runTest")
-            .completed(false)
-            .startTime(LocalDateTime.now())
-            .status("RUNNING")
-            .build();
+            TestResult initialResult = TestResult.builder()
+                .testId(testId)
+                .description(request.getDescription())
+                .url(request.getUrl())
+                .method(request.getMethod())
+                .className(this.getClass().getSimpleName())
+                .methodName("runTest")
+                .completed(false)
+                .startTime(LocalDateTime.now())
+                .status("RUNNING")
+                .build();
 
-        testResults.put(testId, initialResult);
-        log.info("Created initial result: {}", initialResult);
+            testResults.put(testId, initialResult);
+            log.info("Created initial result: {}", initialResult);
 
-        performanceTestExecutor.submit(() -> runTest(testId, request));
+            performanceTestExecutor.submit(() -> runTest(testId, request));
 
-        return testId;
+            return testId;
+
+        } catch (Exception e) {
+            testInProgress = false;
+            throw e;
+        }
     }
 
+
     /**
-     * 특정 테스트의 현재 상태를 조회
+     * Retrieves current test status and results.
+     *
+     * @param testId Test identifier
+     * @return Current test status and metrics
      */
     public TestResult getTestStatus(String testId) {
         return testResults.get(testId);
     }
 
     /**
-     * 모든 테스트 결과 조회
+     * Retrieves all historical test results.
+     *
+     * @return List of all test results
      */
     public List<TestResult> getAllTestResults() {
         return new ArrayList<>(testResults.values());
     }
 
     /**
-     * 애플리케이션 종료 시 실행 스레드 풀 안전하게 종료하여 리소스 누수 방지
+     * Safely shuts down the thread pool upon application exit to prevent resource leaks.
      */
     @PreDestroy
     public void shutdown() {
@@ -134,10 +165,11 @@ public class PerformanceTestService {
     }
 
     /**
-     * 실제 성능 테스트를 실행
+     * Executes the actual performance test with specified parameters.
+     * Manages concurrent requests, collects metrics, and updates test progress.
      *
-     * @param testId  테스트 ID
-     * @param request 테스트 시나리오 요청 정보
+     * @param testId Unique identifier for the test
+     * @param request Test configuration parameters
      */
     private void runTest(String testId, TestScenarioRequest request) {
         ThreadMetrics threadMetrics = null;
@@ -180,7 +212,7 @@ public class PerformanceTestService {
     }
 
     /**
-     * HTTP 요청 헤더 준비
+     * Prepare HTTP request header
      */
     private HttpHeaders prepareHeaders(TestScenarioRequest request, String testId) {
         HttpHeaders headers = new HttpHeaders();
@@ -190,7 +222,7 @@ public class PerformanceTestService {
     }
 
     /**
-     * HTTP 요청 Entity 생성
+     * Generate HTTP request Entity
      */
     private HttpEntity<?> createRequestEntity(TestScenarioRequest request, HttpHeaders headers) {
         if (request.getRequestBody() != null && !request.getRequestBody().isEmpty()) {
@@ -201,7 +233,7 @@ public class PerformanceTestService {
     }
 
     /**
-     * 테스트 요청 실행
+     * Executes the test request
      */
     private void executeTestRequests(TestScenarioRequest request, CountDownLatch latch,
         List<Long> responseTimes, AtomicInteger successCount, AtomicInteger failureCount,
@@ -226,7 +258,7 @@ public class PerformanceTestService {
     }
 
     /**
-     * 실패한 요청 처리
+     * Handles failed requests
      */
     private void handleFailedRequests(int remainingRequests, AtomicInteger failureCount,
         CountDownLatch latch) {
@@ -237,9 +269,9 @@ public class PerformanceTestService {
     }
 
     /**
-     * 테스트 완료 대기
+     * Waits for the test to complete
      *
-     * @return 정상 완료 여부
+     * @return Whether the completion was successful
      */
     private boolean waitForTestCompletion(String testId, TestScenarioRequest request,
         CountDownLatch latch) {
@@ -257,7 +289,7 @@ public class PerformanceTestService {
     }
 
     /**
-     * 단일 사용자의 반복 요청 실행
+     * Executes repeated requests from a single user
      */
     private void executeUserRequests(TestScenarioRequest request, CountDownLatch latch,
         List<Long> responseTimes, AtomicInteger successCount, AtomicInteger failureCount,
@@ -265,8 +297,10 @@ public class PerformanceTestService {
 
         for (int j = 0; j < request.getRepeatCount(); j++) {
             try {
-                executeRequest(request, responseTimes, successCount, failureCount, requestEntity, testId);
+                executeRequest(request, responseTimes, successCount, failureCount, requestEntity,
+                    testId);
             } catch (Exception e) {
+
                 log.error("Request failed: {}", e.getMessage());
                 failureCount.incrementAndGet();
             } finally {
@@ -276,10 +310,11 @@ public class PerformanceTestService {
     }
 
     /**
-     * 단일 HTTP 요청 실행
+     * Executes repeated requests from a single user
      */
     private void executeRequest(TestScenarioRequest request, List<Long> responseTimes,
-        AtomicInteger successCount, AtomicInteger failureCount, HttpEntity<?> requestEntity, String testId) {
+        AtomicInteger successCount, AtomicInteger failureCount, HttpEntity<?> requestEntity,
+        String testId) {
 
         long startTime = System.nanoTime();
         ResponseEntity<?> response = restTemplate.exchange(
@@ -302,7 +337,7 @@ public class PerformanceTestService {
                 failureCount.incrementAndGet();
             }
 
-            // 실시간 진행 상황 업데이트
+            // Updates the real-time progress
             currentResult.updateProgress(
                 successCount.get() + failureCount.get(),
                 successCount.get(),
@@ -311,15 +346,12 @@ public class PerformanceTestService {
         }
     }
 
-    /**
-     * 램프업 딜레이 계산
-     */
     private long calculateRampUpDelay(int userIndex, int rampUpSeconds, int totalUsers) {
         return (long) (((double) userIndex / totalUsers) * rampUpSeconds * 1000);
     }
 
     /**
-     * 타임아웃 발생 시 처리
+     * handle timeout
      */
     private void handleTestTimeout(String testId) {
         log.error("Test {} timed out", testId);
@@ -350,7 +382,7 @@ public class PerformanceTestService {
     }
 
     /**
-     * 테스트 에러 발생 시 처리
+     * handle test error
      */
     private void handleTestError(String testId, Exception e) {
         List<MemoryMetrics> metrics = stopMetricsCollection(testId);
@@ -370,50 +402,49 @@ public class PerformanceTestService {
     }
 
     /**
-     * 최종 테스트 결과 업데이트
+     * update test results (final)
      */
     private void updateFinalResults(String testId, TestScenarioRequest request,
         List<Long> responseTimes, int successCount, int failureCount) {
+        try {
+            List<MemoryMetrics> metrics = stopMetricsCollection(testId);
+            LocalDateTime endTime = LocalDateTime.now();
+            TestResult currentResult = testResults.get(testId);
 
-        List<MemoryMetrics> metrics = stopMetricsCollection(testId);
-        LocalDateTime endTime = LocalDateTime.now();
-        TestResult currentResult = testResults.get(testId);
+            double totalSeconds = java.time.Duration.between(currentResult.getStartTime(), endTime)
+                .toMillis() / 1000.0;
 
-        double totalSeconds = java.time.Duration.between(currentResult.getStartTime(), endTime)
-            .toMillis() / 1000.0;
+            TestResult finalResult = TestResult.builder()
+                .testId(testId)
+                .description(request.getDescription())
+                .url(request.getUrl())
+                .method(request.getMethod())
+                .className(this.getClass().getSimpleName())
+                .methodName("runTest")
+                .completed(true)
+                .startTime(currentResult.getStartTime())
+                .endTime(endTime)
+                .totalRequests(successCount + failureCount)
+                .successfulRequests(successCount)
+                .failedRequests(failureCount)
+                .averageResponseTime(calculateAverageResponseTime(responseTimes))
+                .maxResponseTime(calculateMaxResponseTime(responseTimes))
+                .minResponseTime(calculateMinResponseTime(responseTimes))
+                .requestsPerSecond((successCount + failureCount) / totalSeconds)
+                .errorRate(calculateErrorRate(successCount, failureCount))
+                .status("COMPLETED")
+                .build();
 
-        TestResult finalResult = TestResult.builder()
-            .testId(testId)
-            .description(request.getDescription())
-            .url(request.getUrl())
-            .method(request.getMethod())
-            .className(this.getClass().getSimpleName())
-            .methodName("runTest")
-            .completed(true)
-            .startTime(currentResult.getStartTime())
-            .endTime(endTime)
-            .totalRequests(successCount + failureCount)
-            .successfulRequests(successCount)
-            .failedRequests(failureCount)
-            .averageResponseTime(calculateAverageResponseTime(responseTimes))
-            .maxResponseTime(calculateMaxResponseTime(responseTimes))
-            .minResponseTime(calculateMinResponseTime(responseTimes))
-            .requestsPerSecond((successCount + failureCount) / totalSeconds)
-            .errorRate(calculateErrorRate(successCount, failureCount))
-            .status("COMPLETED")
-            .build();
-
-        responseTimes.forEach(finalResult::addResponseTime);
-        if (metrics != null) {
-            metrics.forEach(finalResult::addMemoryMetric);
+            responseTimes.forEach(finalResult::addResponseTime);
+            if (metrics != null) {
+                metrics.forEach(finalResult::addMemoryMetric);
+            }
+            testResults.put(testId, finalResult);
+        } finally {
+            testInProgress = false;
         }
-
-        testResults.put(testId, finalResult);
     }
 
-    /**
-     * 평균 응답 시간 계산
-     */
     private double calculateAverageResponseTime(List<Long> responseTimes) {
         return responseTimes.stream()
             .mapToLong(Long::valueOf)
@@ -421,9 +452,6 @@ public class PerformanceTestService {
             .orElse(0.0);
     }
 
-    /**
-     * 최대 응답 시간 계산
-     */
     private double calculateMaxResponseTime(List<Long> responseTimes) {
         return responseTimes.stream()
             .mapToLong(Long::valueOf)
@@ -431,9 +459,6 @@ public class PerformanceTestService {
             .orElse(0);
     }
 
-    /**
-     * 최소 응답 시간 계산
-     */
     private double calculateMinResponseTime(List<Long> responseTimes) {
         return responseTimes.stream()
             .mapToLong(Long::valueOf)
@@ -441,9 +466,6 @@ public class PerformanceTestService {
             .orElse(0);
     }
 
-    /**
-     * 에러율 계산
-     */
     private double calculateErrorRate(int successCount, int failureCount) {
         return failureCount * 100.0 / (successCount + failureCount);
     }
