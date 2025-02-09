@@ -15,12 +15,23 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+/**
+ * Service responsible for collecting and managing performance measurement data.
+ * Stores and analyzes performance metrics for methods annotated with @PerformanceMeasure.
+ * Provides functionality to detect performance bottlenecks and generate performance reports.
+ */
 @Slf4j
 @Service
 public class PerformanceMonitorService {
 
     private final Map<String, List<PerformanceData>> performanceDataMap = new ConcurrentHashMap<>();
 
+    /**
+     * Adds new performance measurement data to the monitoring system.
+     * If execution time exceeds threshold (1000ms), logs a warning for potential bottleneck.
+     *
+     * @param data Performance measurement data to be added
+     */
     public void addPerformanceData(PerformanceData data) {
         String key = data.getClassName() + "." + data.getMethodName();
         performanceDataMap.computeIfAbsent(key, k -> new ArrayList<>()).add(data);
@@ -30,6 +41,11 @@ public class PerformanceMonitorService {
         }
     }
 
+    /**
+     * Retrieves all collected performance data, sorted by timestamp in descending order.
+     *
+     * @return List of all performance measurements
+     */
     public List<PerformanceData> getAllPerformanceData() {
         return performanceDataMap.values().stream()
             .flatMap(List::stream)

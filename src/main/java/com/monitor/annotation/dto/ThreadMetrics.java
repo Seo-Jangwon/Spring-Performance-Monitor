@@ -5,6 +5,8 @@
 
 package com.monitor.annotation.dto;
 
+import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,12 +17,13 @@ import java.util.Map;
 @Getter
 @Setter
 @Builder
-public class ThreadMetrics {
+public class ThreadMetrics implements Cloneable {
+
     private MetricType type;
     private String methodName;
     private String className;
 
-    // 기본 스레드 정보
+    // thread info
     private long threadId;
     private String threadName;
     private long threadCpuTime;
@@ -30,18 +33,18 @@ public class ThreadMetrics {
     private int priority;
     private StackTraceElement[] stackTrace;
 
-    // 스레드 풀 관련 메트릭
+    // thread pool metrics
     private Integer poolSize;
     private Integer activePoolThreads;
     private Long queuedTasks;
     private Long completedTasks;
 
-    // 메서드 내부 생성 스레드 추적
+    // Method internal thread tracing
     private Map<Long, ThreadMetrics> childThreads;
     private long parentThreadId;
     private List<ThreadLifecycleEvent> lifecycleEvents;
 
-    // 스레드 상태 통계
+    // thread state
     private int runningThreadCount;
     private int blockedThreadCount;
     private int waitingThreadCount;
@@ -73,11 +76,43 @@ public class ThreadMetrics {
             .type(MetricType.SYSTEM)
             .build();
     }
+
+    @Override
+    public ThreadMetrics clone() {
+        try {
+            ThreadMetrics cloned = (ThreadMetrics) super.clone();
+
+            // Deep copy childThreads
+            if (this.childThreads != null) {
+                Map<Long, ThreadMetrics> clonedChildren = new ConcurrentHashMap<>();
+                this.childThreads.forEach((key, value) ->
+                    clonedChildren.put(key, value.clone())
+                );
+                cloned.setChildThreads(clonedChildren);
+            }
+
+            // Deep copy stackTrace
+            if (this.stackTrace != null) {
+                cloned.setStackTrace(this.stackTrace.clone());
+            }
+
+            // Deep copy lifecycleEvents
+            if (this.lifecycleEvents != null) {
+                cloned.setLifecycleEvents(new ArrayList<>(this.lifecycleEvents));
+            }
+
+            return cloned;
+        } catch (CloneNotSupportedException e) {
+            throw new RuntimeException("Failed to clone ThreadMetrics", e);
+        }
+    }
+
 }
 
 @Getter
 @Builder
 class ThreadLifecycleEvent {
+
     private long timestamp;
     private EventType type;
     private String description;

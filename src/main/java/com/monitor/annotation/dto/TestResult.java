@@ -41,13 +41,13 @@ public class TestResult {
     private Long latestResponseTime;
     private ThreadMetrics threadMetrics;
 
-    // 메모리 모니터링 관련
+    // Memory monitoring
     private double averageHeapUsage;
     private double maxHeapUsage;
     private int totalGCCount;
     private long totalGCTime;
 
-    // mutable한 리스트들
+    // mutable lists
     @Builder.Default
     private final List<MemoryMetrics> memoryMetrics = new ArrayList<>();
     @Builder.Default
@@ -97,13 +97,13 @@ public class TestResult {
         synchronized (lock) {
             this.memoryMetrics.add(metric);
 
-            // 평균 힙 사용량 업데이트
+            // update avg heap useage
             this.averageHeapUsage = this.memoryMetrics.stream()
                 .mapToLong(MemoryMetrics::getHeapUsed)
                 .average()
                 .orElse(0.0);
 
-            // 최대 힙 사용량 업데이트
+            // update max heap usage
             this.maxHeapUsage = this.memoryMetrics.stream()
                 .mapToLong(MemoryMetrics::getHeapUsed)
                 .max()
