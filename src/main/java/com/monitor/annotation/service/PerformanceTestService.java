@@ -34,12 +34,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * Core service for executing performance tests against REST endpoints.
- * Provides functionality for:
- * - Concurrent load testing
- * - Real-time metrics collection
- * - Test progress monitoring
- * - Result aggregation and analysis
+ * Core service for executing performance tests against REST endpoints. Provides functionality for:
+ * - Concurrent load testing - Real-time metrics collection - Test progress monitoring - Result
+ * aggregation and analysis
  */
 @Slf4j
 @Service
@@ -90,8 +87,8 @@ public class PerformanceTestService {
     }
 
     /**
-     * Initiates a new performance test based on the provided configuration.
-     * Ensures only one test runs at a time and manages test lifecycle.
+     * Initiates a new performance test based on the provided configuration. Ensures only one test
+     * runs at a time and manages test lifecycle.
      *
      * @param request Test configuration including endpoint, concurrency, and other parameters
      * @return Unique test ID for tracking the test
@@ -165,10 +162,10 @@ public class PerformanceTestService {
     }
 
     /**
-     * Executes the actual performance test with specified parameters.
-     * Manages concurrent requests, collects metrics, and updates test progress.
+     * Executes the actual performance test with specified parameters. Manages concurrent requests,
+     * collects metrics, and updates test progress.
      *
-     * @param testId Unique identifier for the test
+     * @param testId  Unique identifier for the test
      * @param request Test configuration parameters
      */
     private void runTest(String testId, TestScenarioRequest request) {

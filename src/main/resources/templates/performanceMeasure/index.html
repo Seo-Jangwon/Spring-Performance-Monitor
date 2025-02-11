@@ -12,7 +12,6 @@
   <link href="https://cdn.jsdelivr.net/npm/jsoneditor@9.5.5/dist/jsoneditor.min.css"
         rel="stylesheet">
   <link href="/performanceMeasure/css/styles.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.js"></script>
 </head>
 <body>
 <div class="container mt-4">
@@ -194,17 +193,44 @@
 </template>
 <div th:replace="~{performanceMeasure/test-details :: detailsModal}"></div>
 
+<!-- Core libraries -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsoneditor@9.5.5/dist/jsoneditor.min.js"></script>
-<script type="module">
-  import {mainManager} from '/performanceMeasure/js/main.js';
-  import {testDetailsManager} from '/performanceMeasure/js/test-details.js';
+<script src="https://cdnjs.cloudflare.com/ajax/libs/rxjs/7.8.1/rxjs.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.js"></script>
 
-  window.selectEndpoint = (element) => mainManager.selectEndpoint(element);
-  window.toggleView = (viewType) => mainManager.toggleView(viewType);
-  window.clearResults = () => mainManager.clearResults();
-  window.showDetails = (testId) => testDetailsManager.showDetails(testId);
-  window.showStackTrace = () => testDetailsManager.showStackTrace();
+<script type="module">
+  const waitForRxJS = () => {
+    return new Promise((resolve) => {
+      const check = () => {
+        if (window.rxjs) {
+          resolve();
+        } else {
+          setTimeout(check, 50);
+        }
+      };
+      check();
+    });
+  };
+
+  const init = async () => {
+    await waitForRxJS();
+
+    const {mainManager} = await import('/performanceMeasure/js/main.js');
+    const {testDetailsManager} = await import('/performanceMeasure/js/components/TestDetailsManager.js');
+
+    window.selectEndpoint = (element) => mainManager.selectEndpoint(element);
+    window.toggleView = (viewType) => mainManager.toggleView(viewType);
+    window.clearResults = () => mainManager.clearResults();
+    window.showDetails = (testId) => testDetailsManager.showDetails(testId);
+    window.showStackTrace = () => testDetailsManager.showStackTrace();
+
+    await mainManager.initialize();
+  };
+
+  init().catch(error => {
+    console.error('Application initialization failed:', error);
+  });
 </script>
 
 </body>

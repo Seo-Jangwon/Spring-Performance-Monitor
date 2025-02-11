@@ -3,13 +3,14 @@
  * Licensed under MIT License
  */
 
+import {testDetailsManager} from './components/TestDetailsManager.js';
+import {metricsService} from './core/MetricsSSEService.js';
 import {
   formatNumber,
   escapeHtml,
   getStatusText,
   getStatusClass
 } from './utils/formatters.js';
-import {testDetailsManager} from './test-details.js';
 
 /**
  * MainManager class for handling core application functionality.
@@ -26,6 +27,7 @@ class MainManager {
     this.editor = null;
     this.pollCount = 0;
     this.MAX_POLLS = 60;
+    this.isTestRunning = false;
   }
 
   /**
@@ -55,10 +57,10 @@ class MainManager {
    * Sets up event listeners for dynamic header management and form submission.
    */
   setupEventListeners() {
-    // 헤더 추가/제거 이벤트
+    // Add/delete header event
     document.addEventListener('click', this.handleHeaderRowClick.bind(this));
 
-    // 폼 제출 이벤트
+    // Submit form event
     document.getElementById('testForm').addEventListener('submit',
         this.handleFormSubmit.bind(this));
   }
@@ -111,6 +113,11 @@ class MainManager {
   async handleFormSubmit(e) {
     e.preventDefault();
 
+    if (this.isTestRunning) {
+      this.showError('Test is already running');
+      return;
+    }
+
     if (!this.selectedEndpoint) {
       this.showError('Please select an endpoint first');
       return;
@@ -137,6 +144,7 @@ class MainManager {
     };
 
     try {
+      this.isTestRunning = true;
       const response = await fetch('/performanceMeasure/run', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -146,12 +154,16 @@ class MainManager {
       if (response.ok) {
         const testId = await response.text();
         this.showSuccess('Test started successfully');
+
+        metricsService.connect(testId);
         await this.pollTestStatus(testId);
       } else {
         throw new Error('Failed to start test');
       }
     } catch (error) {
       this.showError('Error starting test: ' + error.message);
+    } finally {
+      this.isTestRunning = false;
     }
   }
 
@@ -166,7 +178,7 @@ class MainManager {
     cardsContainer.innerHTML = '';
     listBody.innerHTML = '';
 
-    // 엔드포인트 정렬 (HTTP 메서드 순)
+    // Sort endPoint
     const sortedMethods = Object.keys(this.endpointsData).sort();
 
     sortedMethods.forEach(method => {
@@ -280,11 +292,10 @@ class MainManager {
    * Handles endpoint selection and updates UI accordingly
    */
   selectEndpoint(element) {
-    // 이전 선택 해제
+
     document.querySelectorAll('.selected-endpoint').forEach(el =>
         el.classList.remove('selected-endpoint'));
 
-    // 새로운 선택
     element.classList.add('selected-endpoint');
     const [method, index] = element.dataset.endpointId.split('-');
     this.selectedEndpoint = {
@@ -294,7 +305,7 @@ class MainManager {
 
     console.log('Selected Endpoint:', this.selectedEndpoint); // 디버깅용
 
-    // UI 업데이트
+    // Update Ui
     const methodEl = document.getElementById('selectedEndpointMethod');
     const urlEl = document.getElementById('selectedEndpointUrl');
     const descEl = document.getElementById('endpoint-description');
@@ -314,7 +325,7 @@ class MainManager {
       requestTypeEl.textContent = this.selectedEndpoint.requestType;
     }
 
-    // Request Body 섹션 표시/숨김 처리
+    // Show/hide Request Body
     if (this.selectedEndpoint.httpMethod === 'POST' ||
         this.selectedEndpoint.httpMethod === 'PUT' ||
         (this.selectedEndpoint.requestType &&
@@ -340,7 +351,7 @@ class MainManager {
       requestBodySection.style.display = 'none';
     }
 
-    // Run Test 버튼 활성화
+    // Active Run Test button
     const runTestBtn = document.getElementById('runTestBtn');
     if (runTestBtn) {
       runTestBtn.disabled = false;

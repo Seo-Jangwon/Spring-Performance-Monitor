@@ -5,13 +5,14 @@
 
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<th:block th:fragment="detailsModal">
+<div th:fragment="detailsModal">
   <div class="modal fade"
        id="detailsModal"
        tabindex="-1"
        role="dialog"
        data-bs-backdrop="static"
-       aria-labelledby="detailsModalLabel">
+       aria-labelledby="detailsModalLabel"
+       aria-modal="true">
     <div class="modal-dialog modal-xl">
       <div class="modal-content">
         <div class="modal-header">
@@ -19,88 +20,102 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <!-- 성능 측정 결과 섹션 -->
+          <!-- Performance Results Section -->
           <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-              <h5 class="card-title mb-0">Annotated Method Performance</h5>
+            <div
+                class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0">Performance Results</h5>
+              <div class="badge bg-light text-dark" id="test-status">Status: Running</div>
             </div>
             <div class="card-body">
-              <!-- 기본 정보 -->
-              <div class="row mb-4">
+              <!-- Test Information Grid -->
+              <div class="row g-3 mb-4">
                 <div class="col-md-6">
-                  <h6>Test Information</h6>
-                  <table class="table table-sm">
-                    <tr>
-                      <td>Description:</td>
-                      <td id="modal-description"></td>
-                    </tr>
-                    <tr>
-                      <td>URL:</td>
-                      <td id="modal-url"></td>
-                    </tr>
-                    <tr>
-                      <td>Method:</td>
-                      <td id="modal-method"></td>
-                    </tr>
-                    <tr>
-                      <td>Duration:</td>
-                      <td id="modal-duration"></td>
-                    </tr>
-                  </table>
+                  <div class="card h-100">
+                    <div class="card-body">
+                      <h6 class="border-bottom pb-2">Test Configuration</h6>
+                      <div class="table-responsive">
+                        <table class="table table-sm">
+                          <tbody>
+                          <tr>
+                            <td class="text-muted">Description:</td>
+                            <td id="modal-description"></td>
+                          </tr>
+                          <tr>
+                            <td class="text-muted">URL:</td>
+                            <td id="modal-url"></td>
+                          </tr>
+                          <tr>
+                            <td class="text-muted">Method:</td>
+                            <td id="modal-method"></td>
+                          </tr>
+                          <tr>
+                            <td class="text-muted">Duration:</td>
+                            <td id="modal-duration"></td>
+                          </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div class="col-md-6">
-                  <h6>Performance Results</h6>
-                  <table class="table table-sm">
-                    <tr>
-                      <td>Total Requests:</td>
-                      <td id="modal-total-requests"></td>
-                    </tr>
-                    <tr>
-                      <td>Success Rate:</td>
-                      <td id="modal-success-rate"></td>
-                    </tr>
-                    <tr>
-                      <td>Avg Response Time:</td>
-                      <td id="modal-avg-response"></td>
-                    </tr>
-                    <tr>
-                      <td>Requests/sec:</td>
-                      <td id="modal-rps"></td>
-                    </tr>
-                  </table>
+                  <div class="card h-100">
+                    <div class="card-body">
+                      <h6 class="border-bottom pb-2">Performance Metrics</h6>
+                      <div class="table-responsive">
+                        <table class="table table-sm">
+                          <tbody>
+                          <tr>
+                            <td class="text-muted">Total Requests:</td>
+                            <td id="modal-total-requests">0</td>
+                          </tr>
+                          <tr>
+                            <td class="text-muted">Success Rate:</td>
+                            <td id="modal-success-rate">0%</td>
+                          </tr>
+                          <tr>
+                            <td class="text-muted">Avg Response Time:</td>
+                            <td id="modal-avg-response">0 ms</td>
+                          </tr>
+                          <tr>
+                            <td class="text-muted">Requests/sec:</td>
+                            <td id="modal-rps">0</td>
+                          </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <!-- 응답 시간 차트 -->
-              <div class="row">
-                <div class="col-12">
-                  <div class="card">
-                    <div class="card-header">
-                      <h6 class="card-title">Response Time</h6>
-                    </div>
-                    <div class="card-body">
-                      <div class="chart-container">
-                        <canvas id="responseTimeChart"></canvas>
-                      </div>
-                    </div>
+              <!-- Response Time Chart -->
+              <div class="card mb-4">
+                <div class="card-header">
+                  <h6 class="card-title mb-0">Response Time Trend</h6>
+                </div>
+                <div class="card-body">
+                  <div class="chart-container">
+                    <canvas id="responseTimeChart"></canvas>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- 시스템 모니터링 섹션 -->
+          <!-- System Monitoring Section -->
           <div class="card">
             <div class="card-header bg-info text-white">
-              <h5 class="card-title mb-0">System Monitoring</h5>
+              <h5 class="card-title mb-0">System Resources</h5>
             </div>
             <div class="card-body">
-              <!-- 메모리 차트 -->
-              <div class="row">
-                <div class="col-md-6 mb-4">
+              <!-- Memory Charts -->
+              <div class="row g-3">
+                <div class="col-md-6">
                   <div class="card">
                     <div class="card-header">
-                      <h6 class="card-title">Heap Memory Usage</h6>
+                      <h6 class="card-title mb-0">Heap Memory Usage</h6>
                     </div>
                     <div class="card-body">
                       <div class="chart-container">
@@ -109,10 +124,10 @@
                     </div>
                   </div>
                 </div>
-                <div class="col-md-6 mb-4">
+                <div class="col-md-6">
                   <div class="card">
                     <div class="card-header">
-                      <h6 class="card-title">Non-Heap Memory Usage</h6>
+                      <h6 class="card-title mb-0">Non-Heap Memory Usage</h6>
                     </div>
                     <div class="card-body">
                       <div class="chart-container">
@@ -123,12 +138,12 @@
                 </div>
               </div>
 
-              <!-- 스레드 상태 차트 -->
-              <div class="row">
-                <div class="col-md-6 mb-4">
+              <!-- Thread Monitoring -->
+              <div class="row g-3 mt-1">
+                <div class="col-md-6">
                   <div class="card">
                     <div class="card-header">
-                      <h6 class="card-title">Thread Pool Status</h6>
+                      <h6 class="card-title mb-0">Thread Pool Status</h6>
                     </div>
                     <div class="card-body">
                       <div class="chart-container">
@@ -137,126 +152,175 @@
                     </div>
                   </div>
                 </div>
-                <div class="col-md-6 mb-4">
-                  <!-- Method Thread Metrics -->
+                <div class="col-md-6">
                   <div class="card">
-                    <div class="card-header">
-                      <h6 class="card-title">Method Thread Details</h6>
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                      <h6 class="card-title mb-0">Thread Details</h6>
+                      <button class="btn btn-sm btn-outline-secondary" onclick="showStackTrace()">
+                        View Stack Trace
+                      </button>
                     </div>
                     <div class="card-body">
-                      <table class="table table-sm">
-                        <tr>
-                          <td>Thread Name:</td>
-                          <td id="method-thread-name">-</td>
-                        </tr>
-                        <tr>
-                          <td>Thread ID:</td>
-                          <td id="method-thread-id">-</td>
-                        </tr>
-                        <tr>
-                          <td>CPU Time:</td>
-                          <td id="method-cpu-time">-</td>
-                        </tr>
-                        <tr>
-                          <td>User Time:</td>
-                          <td id="method-user-time">-</td>
-                        </tr>
-                        <tr>
-                          <td>Thread State:</td>
-                          <td id="method-thread-state">-</td>
-                        </tr>
-                        <tr>
-                          <td>Priority:</td>
-                          <td id="method-thread-priority">-</td>
-                        </tr>
-                        <tr>
-                          <td>Is Daemon:</td>
-                          <td id="method-thread-daemon">-</td>
-                        </tr>
-                        <tr>
-                          <td>Stack Trace:</td>
-                          <td>
-                            <button class="btn btn-sm btn-info" onclick="showStackTrace()">
-                              View Stack Trace
-                            </button>
-                          </td>
-                        </tr>
-                      </table>
+                      <div class="table-responsive">
+                        <table class="table table-sm">
+                          <tbody>
+                          <tr>
+                            <td class="text-muted">Thread Name:</td>
+                          <tr>
+                            <td class="text-muted">Thread Name:</td>
+                            <td id="method-thread-name">-</td>
+                          </tr>
+                          <tr>
+                            <td class="text-muted">Thread ID:</td>
+                            <td id="method-thread-id">-</td>
+                          </tr>
+                          <tr>
+                            <td class="text-muted">CPU Time:</td>
+                            <td id="method-cpu-time">-</td>
+                          </tr>
+                          <tr>
+                            <td class="text-muted">User Time:</td>
+                            <td id="method-user-time">-</td>
+                          </tr>
+                          <tr>
+                            <td class="text-muted">Thread State:</td>
+                            <td id="method-thread-state">-</td>
+                          </tr>
+                          <tr>
+                            <td class="text-muted">Priority:</td>
+                            <td id="method-thread-priority">-</td>
+                          </tr>
+                          <tr>
+                            <td class="text-muted">Is Daemon:</td>
+                            <td id="method-thread-daemon">-</td>
+                          </tr>
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- 메모리 상태 -->
-              <div class="row mt-4">
+              <!-- System Metrics Summary -->
+              <div class="row g-3 mt-1">
                 <div class="col-md-3">
                   <div class="card">
                     <div class="card-header">
-                      <h6 class="card-title">Heap Memory</h6>
+                      <h6 class="card-title mb-0">Heap Memory</h6>
                     </div>
                     <div class="card-body">
-                      <p class="mb-1">Used: <span id="modal-heap-used">0 MB</span></p>
-                      <p class="mb-1">Max: <span id="modal-heap-max">0 MB</span></p>
-                      <p class="mb-1">Young Gen: <span id="modal-young-gen">0 MB</span></p>
-                      <p class="mb-0">Old Gen: <span id="modal-old-gen">0 MB</span></p>
+                      <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Used:</span>
+                        <span id="modal-heap-used">0 MB</span>
+                      </div>
+                      <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Max:</span>
+                        <span id="modal-heap-max">0 MB</span>
+                      </div>
+                      <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Young Gen:</span>
+                        <span id="modal-young-gen">0 MB</span>
+                      </div>
+                      <div class="d-flex justify-content-between">
+                        <span class="text-muted">Old Gen:</span>
+                        <span id="modal-old-gen">0 MB</span>
+                      </div>
                     </div>
                   </div>
                 </div>
                 <div class="col-md-3">
                   <div class="card">
                     <div class="card-header">
-                      <h6 class="card-title">Non-Heap Memory</h6>
+                      <h6 class="card-title mb-0">Non-Heap Memory</h6>
                     </div>
                     <div class="card-body">
-                      <p class="mb-1">Used: <span id="modal-nonheap-used">0 MB</span></p>
-                      <p class="mb-1">Committed: <span id="modal-nonheap-committed">0 MB</span></p>
-                      <p class="mb-0">Metaspace: <span id="modal-metaspace-used">0 MB</span></p>
+                      <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Used:</span>
+                        <span id="modal-nonheap-used">0 MB</span>
+                      </div>
+                      <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Committed:</span>
+                        <span id="modal-nonheap-committed">0 MB</span>
+                      </div>
+                      <div class="d-flex justify-content-between">
+                        <span class="text-muted">Metaspace:</span>
+                        <span id="modal-metaspace-used">0 MB</span>
+                      </div>
                     </div>
                   </div>
                 </div>
                 <div class="col-md-3">
                   <div class="card">
                     <div class="card-header">
-                      <h6 class="card-title">GC Activity</h6>
+                      <h6 class="card-title mb-0">GC Activity</h6>
                     </div>
                     <div class="card-body">
-                      <p class="mb-1">Young Count: <span id="modal-young-gc-count">0</span></p>
-                      <p class="mb-1">Old Count: <span id="modal-old-gc-count">0</span></p>
-                      <p class="mb-0">Total Time: <span id="modal-gc-time">0 ms</span></p>
+                      <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Young Count:</span>
+                        <span id="modal-young-gc-count">0</span>
+                      </div>
+                      <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Old Count:</span>
+                        <span id="modal-old-gc-count">0</span>
+                      </div>
+                      <div class="d-flex justify-content-between">
+                        <span class="text-muted">Total Time:</span>
+                        <span id="modal-gc-time">0 ms</span>
+                      </div>
                     </div>
                   </div>
                 </div>
                 <div class="col-md-3">
                   <div class="card">
                     <div class="card-header">
-                      <h6 class="card-title">Thread Pool</h6>
+                      <h6 class="card-title mb-0">Thread Pool</h6>
                     </div>
                     <div class="card-body">
-                      <p class="mb-1">Active: <span id="modal-active-threads">0</span></p>
-                      <p class="mb-1">Pool Size: <span id="modal-pool-size">0</span>/<span
-                          id="modal-max-pool-size">0</span></p>
-                      <p class="mb-0">Queue Size: <span id="modal-queue-size">0</span></p>
+                      <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Active:</span>
+                        <span id="modal-active-threads">0</span>
+                      </div>
+                      <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Pool Size:</span>
+                        <span>
+                          <span id="modal-pool-size">0</span>/<span
+                            id="modal-max-pool-size">0</span>
+                        </span>
+                      </div>
+                      <div class="d-flex justify-content-between">
+                        <span class="text-muted">Queue Size:</span>
+                        <span id="modal-queue-size">0</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- 스레드 상태 -->
+              <!-- Thread States Summary -->
               <div class="row mt-3">
                 <div class="col-12">
                   <div class="card">
                     <div class="card-header">
-                      <h6 class="card-title">Thread States</h6>
+                      <h6 class="card-title mb-0">Thread States Overview</h6>
                     </div>
                     <div class="card-body">
-                      <div class="d-flex justify-content-between">
-                        <div>Running: <span id="modal-running-threads"
-                                            class="badge bg-success">0</span></div>
-                        <div>Waiting: <span id="modal-waiting-threads"
-                                            class="badge bg-warning">0</span></div>
-                        <div>Blocked: <span id="modal-blocked-threads"
-                                            class="badge bg-danger">0</span></div>
-                        <div>Total: <span id="modal-total-threads" class="badge bg-info">0</span>
+                      <div class="d-flex justify-content-between flex-wrap">
+                        <div class="me-4 mb-2">
+                          <span class="text-muted me-2">Running:</span>
+                          <span class="badge bg-success" id="modal-running-threads">0</span>
+                        </div>
+                        <div class="me-4 mb-2">
+                          <span class="text-muted me-2">Waiting:</span>
+                          <span class="badge bg-warning" id="modal-waiting-threads">0</span>
+                        </div>
+                        <div class="me-4 mb-2">
+                          <span class="text-muted me-2">Blocked:</span>
+                          <span class="badge bg-danger" id="modal-blocked-threads">0</span>
+                        </div>
+                        <div class="mb-2">
+                          <span class="text-muted me-2">Total:</span>
+                          <span class="badge bg-info" id="modal-total-threads">0</span>
                         </div>
                       </div>
                     </div>
@@ -279,19 +343,12 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <pre id="stack-trace-content" style="max-height: 500px; overflow-y: auto;"></pre>
+          <pre id="stack-trace-content" class="bg-light p-3 rounded"
+               style="max-height: 500px; overflow-y: auto;"></pre>
         </div>
       </div>
     </div>
   </div>
+</div>
 
-  <!--  <script-->
-  <!--      src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>-->
-  <!--  <script type="module">-->
-  <!--    import {testDetailsManager} from '/performanceMeasure/js/test-details.js';-->
-
-  <!--    window.showStackTrace = () => testDetailsManager.showStackTrace();-->
-  <!--  </script>-->
-
-</th:block>
 </html>
