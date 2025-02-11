@@ -5,10 +5,6 @@
 
 package com.monitor.annotation.scanner;
 
-import com.github.javaparser.StaticJavaParser;
-import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.monitor.annotation.annotation.PerformanceMeasure;
 import com.monitor.annotation.dto.PerformanceEndpoint;
 import java.lang.reflect.Modifier;
@@ -21,15 +17,9 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Scanner for detecting and analyzing endpoints that can be performance tested.
